@@ -1,0 +1,89 @@
+.runner-app {
+  --ink: #2a1b17;
+  --paper: #fff8ec;
+  --fox: #e8742a;
+  --fox-dark: #b5501f;
+  position: fixed; inset: 0; overflow: hidden;
+  background: var(--runner-sky, #a9bccb);
+  font-family: 'Nunito', system-ui, sans-serif; color: var(--ink);
+  user-select: none;
+}
+.runner-canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1;
+  background: var(--runner-sky, #a9bccb);
+  object-fit: contain; image-rendering: pixelated;
+}
+/* La cámara trabaja oculta: el vídeo queda tapado por el lienzo del juego.
+   Se mantiene a tamaño completo para que el navegador siga entregando fotogramas. */
+.runner-camera {
+  position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0;
+  object-fit: cover; pointer-events: none;
+}
+
+.runner-topbar { position: absolute; bottom: 14px; left: 14px; display: flex; gap: 10px; z-index: 3; }
+.runner-chip {
+  font: 800 15px/1 'Nunito', system-ui, sans-serif; color: var(--ink);
+  background: var(--paper); border: 3px solid var(--ink); padding: 8px 12px; cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.runner-chip--quiet { opacity: 0.8; font-weight: 700; }
+.runner-chip--quiet:hover { opacity: 1; }
+.runner-chip:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+
+.runner-panel {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto;
+  background: var(--paper); border: 4px solid var(--ink);
+  box-shadow: 0 0 0 4px var(--paper), 0 0 0 8px var(--ink), 10px 10px 0 8px rgba(42, 27, 23, 0.35);
+  padding: 28px 32px; text-align: center; z-index: 2;
+}
+.runner-panel--small { width: min(440px, calc(100vw - 32px)); top: 58%; }
+.runner-panel h1 { font-size: clamp(26px, 4vw, 38px); font-weight: 800; line-height: 1.1; margin-bottom: 12px; color: var(--fox-dark); }
+.runner-panel h2 { font-size: 26px; font-weight: 800; margin: 8px 0; }
+.runner-panel p { font-size: 19px; line-height: 1.4; margin: 6px 0; }
+.runner-kicker { font-size: 14px !important; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 800; opacity: 0.6; }
+.runner-howto { background: #fde9d4; border: 3px dashed var(--fox); padding: 10px; margin: 14px 0 !important; }
+.runner-note { font-size: 16px !important; opacity: 0.75; }
+.runner-season { font-size: 15px !important; margin-top: 14px !important; opacity: 0.7; }
+.runner-season-change { font-size: 21px !important; font-weight: 800; color: #3f7a3a; }
+
+.runner-primary, .runner-secondary {
+  font: 800 22px/1 'Nunito', system-ui, sans-serif; padding: 14px 34px; cursor: pointer;
+  border: 4px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); margin: 6px;
+}
+.runner-primary { background: var(--fox); color: #fff; }
+.runner-secondary { background: #fff; color: var(--ink); }
+.runner-primary:active, .runner-secondary:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+.runner-actions { margin-top: 16px; }
+.runner-link { margin-top: 10px; background: none; border: none; text-decoration: underline; font: 700 15px 'Nunito', system-ui, sans-serif; cursor: pointer; color: var(--ink); }
+
+.runner-hand-icon { width: 102px; height: 108px; image-rendering: pixelated; display: block; margin: 0 auto 4px; }
+
+.runner-stats { display: grid; grid-template-columns: 1fr auto; gap: 8px 20px; margin: 18px auto 6px; max-width: 360px; text-align: left; font-size: 20px; }
+.runner-stats dt { font-weight: 700; }
+.runner-stats dd { font-weight: 800; color: var(--fox-dark); text-align: right; }
+.runner-tech { margin-top: 18px; text-align: left; font-size: 15px; }
+.runner-tech summary { cursor: pointer; font-weight: 800; }
+.runner-tech dl { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; margin-top: 10px; }
+.runner-tech dd { text-align: right; font-variant-numeric: tabular-nums; }
+
+.runner-bubble {
+  position: absolute; left: 50%; top: 16%; transform: translateX(-50%); z-index: 2;
+  background: var(--paper); border: 4px solid var(--ink); box-shadow: 5px 5px 0 var(--ink);
+  padding: 14px 22px; font-size: clamp(20px, 2.6vw, 28px); font-weight: 800; white-space: nowrap;
+  animation: runner-pop 0.25s steps(3) both;
+}
+.runner-countdown {
+  position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 2;
+  font-size: clamp(80px, 16vw, 180px); font-weight: 800; color: #fff;
+  text-shadow: 6px 6px 0 var(--ink), -3px -3px 0 var(--ink), 3px -3px 0 var(--ink), -3px 3px 0 var(--ink);
+  animation: runner-pop 0.3s steps(3) both;
+}
+@keyframes runner-pop { from { transform: translate(-50%, -50%) scale(0.6); } }
+.runner-bubble { animation-name: runner-pop-x; }
+@keyframes runner-pop-x { from { transform: translateX(-50%) scale(0.6); } }
+
+.runner-debug { position: absolute; right: 12px; bottom: 12px; z-index: 4; max-width: 340px; font-size: 12px; color: #fff; background: rgba(42, 27, 23, 0.8); padding: 6px 10px; display: none; }
+.runner-debug[open] { display: block; }
+.runner-debug pre { white-space: pre-wrap; font-size: 11px; }
+.runner-app [hidden] { display: none !important; }

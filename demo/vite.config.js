@@ -15,6 +15,16 @@ export default defineConfig({
   build: {
     target: 'esnext',
     minify: 'oxc',
+    rolldownOptions: {
+      input: {
+        main: path.resolve(import.meta.dirname, 'index.html'),
+        pinch: path.resolve(import.meta.dirname, 'pinch.html'),
+        runner: path.resolve(import.meta.dirname, 'runner.html'),
+        flappy: path.resolve(import.meta.dirname, 'flappy.html'),
+        fishing: path.resolve(import.meta.dirname, 'fishing.html'),
+        garden: path.resolve(import.meta.dirname, 'garden.html'),
+      },
+    },
   },
   plugins: [
     {

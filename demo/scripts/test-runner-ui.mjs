@@ -1,0 +1,122 @@
+// Prueba de interfaz del Runner con landmarks sintéticos (sin cámara real).
+// Un «bot» hace la pinza cuando toca para recorrer el bosque completo.
+import { chromium } from 'playwright';
+import { createServer } from 'vite';
+import assert from 'node:assert/strict';
+
+const shots = process.env.RUNNER_SHOTS;
+const server = await createServer({ server: { host: '127.0.0.1', port: 0, strictPort: false, open: false } });
+await server.listen();
+const base = `http://127.0.0.1:${server.httpServer.address().port}`;
+let browser;
+try {
+  browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader'] });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  const errors = [];
+  page.on('pageerror', e => errors.push(String(e)));
+  await page.clock.install();
+  await page.route('**/src/runner/entry.js', route => route.fulfill({ contentType: 'text/javascript', body: `
+    import { startRunnerGame } from '/src/runner/game.js';
+    window.testFrame = { ratio: .8, missing: false };
+    window.bot = { auto: false, holdUntil: 0, lastTarget: null };
+    const XY = [[0,0],[-.3,-.15],[-.6,-.35],[-.7,-.7],[-.4,-1.1],[-.4,-.9],[-.4,-1.45],[-.3,-1.8],[null,-1.1],[0,-1],[0,-1.5],[0,-1.9],[0,-2.2],[.35,-.9],[.4,-1.4],[.4,-1.7],[.4,-1.9],[.65,-.7],[.7,-1.1],[.7,-1.4],[.7,-1.6]];
+    startRunnerGame(document.querySelector('#app'), { subjectId: 'synthetic-runner-test', onNext: next => { window.nextGame = next; }, cameraFactory: ({ onFrame }) => {
+      let interval;
+      return { delegate: 'mock', hand: 'Right', async start() {
+        interval = setInterval(() => {
+          const o = window.testFrame, B = window.bot;
+          const st = document.querySelector('.runner-app').runnerState();
+          if (B.auto && st.phase === 'playing') {
+            const now = performance.now();
+            if (B.holdUntil > now) o.ratio = .1;
+            else {
+              o.ratio = .8;
+              const next = st.obstacles.find(x => !x.passed), foxWorld = st.scroll + 64;
+              if (next && st.fox.onGround && B.lastTarget !== next.id && foxWorld - next.x >= -32) {
+                B.lastTarget = next.id; B.holdUntil = now + 160; o.ratio = .1;
+              }
+            }
+          }
+          const landmarks = XY.map(([a, b]) => ({ x: .5 + (a ?? -.4 + o.ratio) * .12, y: .7 + b * .16, z: 0 }));
+          onFrame({ t: performance.now(), width: 640, height: 480, luminance: 120, latencyMs: 5,
+            hands: o.missing ? [] : [{ handedness: 'Right', score: .99, landmarks }] });
+        }, 33);
+        return true;
+      }, stop() { clearInterval(interval); } };
+    } });
+  ` }));
+  const state = () => page.evaluate(() => document.querySelector('.runner-app').runnerState());
+  const set = patch => page.evaluate(p => Object.assign(window.testFrame, p), patch);
+
+  await page.goto(`${base}/runner.html`);
+  await page.clock.runFor(500);
+  if (shots) await page.screenshot({ path: `${shots}/runner-title.png` });
+  await page.locator('[data-action=start]').click();
+  await page.clock.runFor(1500);
+  assert.equal(await page.locator('[data-role=setup-title]').textContent(), '¡Te veo!');
+  if (shots) await page.screenshot({ path: `${shots}/runner-setup.png` });
+  await set({ ratio: .1 }); await page.clock.runFor(200); await set({ ratio: .8 });
+  await page.clock.runFor(2700);
+  assert.equal((await state()).phase, 'playing');
+  await page.evaluate(() => { window.bot.auto = true; });
+
+  await page.clock.runFor(15000);
+  if (shots) await page.screenshot({ path: `${shots}/runner-play.png` });
+
+  // Pérdida de mano: pausa sin penalizar y reanudación automática.
+  const before = await state();
+  await set({ missing: true }); await page.clock.runFor(2000);
+  const paused = await state();
+  assert.equal(paused.phase, 'paused');
+  assert.ok(Math.abs(paused.scroll - before.scroll) < 120, 'el mundo se detiene en pausa');
+  assert.equal(await page.locator('[data-panel=pause]').isVisible(), true);
+  if (shots) await page.screenshot({ path: `${shots}/runner-pause.png` });
+  await set({ missing: false, ratio: .8 });
+  await page.evaluate(() => Object.assign(window.bot, { lastTarget: null, holdUntil: 0 }));
+  await page.clock.runFor(1800);
+  assert.equal((await state()).phase, 'playing');
+
+  for (let i = 0; i < 40 && (await state()).phase !== 'done'; i++) {
+    await page.clock.runFor(3000);
+    if (shots && i === 6) await page.screenshot({ path: `${shots}/runner-play2.png` });
+  }
+  const end = await state();
+  assert.equal(end.phase, 'done');
+  const r = end.result;
+  assert.equal(r.completed, true);
+  assert.equal(r.summary.obstacles.total, 5);
+  assert.equal(r.summary.obstacles.cleared, 5, JSON.stringify(r.obstacles.filter(o => !o.cleared)));
+  assert.equal(r.quality.pauses, 1);
+  assert.ok(r.summary.pinch.cycles >= 4, `ciclos ${r.summary.pinch.cycles}`);
+  assert.equal(end.nextSeason, 1);
+  assert.equal(await page.locator('[data-panel=end]').isVisible(), true);
+  if (shots) await page.screenshot({ path: `${shots}/runner-end.png` });
+  await page.locator('[data-action=next]').click();
+  assert.equal(await page.evaluate(() => !!window.nextGame && !window.nextGame.skipped), true, 'pasa al siguiente juego');
+  assert.equal(r.hand, 'Right', 'siempre la mano derecha del paciente');
+
+  // Botón para saltar al siguiente juego en mitad del zorro.
+  await page.goto(`${base}/runner.html`);
+  await page.clock.runFor(300);
+  assert.equal(await page.locator('[name="runner-hand"]').count(), 0, 'sin selector de mano');
+  await page.locator('[data-action=start]').click();
+  await page.clock.runFor(1500);
+  await set({ ratio: .1 }); await page.clock.runFor(200); await set({ ratio: .8 });
+  await page.clock.runFor(4000);
+  assert.equal((await state()).phase, 'playing');
+  await page.locator('[data-action=skip]').click();
+  assert.equal(await page.evaluate(() => window.nextGame?.skipped), true, 'salta al siguiente juego');
+  assert.equal(await page.evaluate(() => window.nextGame.result?.completed), false, 'la partida saltada queda como incompleta');
+
+  for (const s of [1, 2, 3]) {
+    await page.goto(`${base}/runner.html?estacion=${s}`);
+    await page.clock.runFor(800);
+    await page.evaluate(() => { document.querySelector('[data-panel=title]').hidden = true; });
+    if (shots) await page.screenshot({ path: `${shots}/runner-season-${s}.png` });
+  }
+  assert.deepEqual(errors, []);
+  console.log('Runner UI OK:', JSON.stringify({ cleared: r.summary.obstacles.cleared, berries: r.summary.berries, timing: r.summary.timing.medianAbsErrorMs, cycles: r.summary.pinch.cycles }));
+} finally {
+  await browser?.close();
+  await server.close();
+}

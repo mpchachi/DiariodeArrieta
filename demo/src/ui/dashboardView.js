@@ -3,7 +3,7 @@ import { listSubjects } from '../database/subjects.js';
 import { getOperatorProfile, logout } from '../database/auth.js';
 import { initChatWidget } from './chatWidget.js';
 
-export async function showDashboard(container, onSelectSubject, onCreateSubject, onLogout) {
+export async function showDashboard(container, onSelectSubject, onCreateSubject, onLogout, onSelectPinch = null, onPlay = null) {
   // Show a quick loader while fetching data
   container.innerHTML = `<div class="dash-loading"><div class="spinner-inner"><div class="spinner-bar"></div></div></div>`;
   
@@ -24,17 +24,23 @@ export async function showDashboard(container, onSelectSubject, onCreateSubject,
     `;
   } else {
     subjectsHtml = subjects.map(s => `
-      <button class="subject-card" data-id="${s.id}">
-        <div class="subject-avatar">${s.display_name.charAt(0).toUpperCase()}</div>
-        <div class="subject-info">
-          <h3>${s.display_name}</h3>
-          <p>${s.sex === 'male' ? 'Hombre' : s.sex === 'female' ? 'Mujer' : 'Otro'}, Nacido en ${s.birth_year}</p>
+      <div class="subject-entry">
+        <button class="subject-card" data-id="${s.id}">
+          <div class="subject-avatar">${s.display_name.charAt(0).toUpperCase()}</div>
+          <div class="subject-info">
+            <h3>${s.display_name}</h3>
+            <p>${s.sex === 'male' ? 'Hombre' : s.sex === 'female' ? 'Mujer' : 'Otro'}, Nacido en ${s.birth_year}</p>
+          </div>
+          <div class="subject-action">
+            <span>${onPlay ? 'Jugar' : onSelectPinch ? 'Jugar al Pastillero' : 'Seleccionar'}</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </div>
+        </button>
+        <div class="subject-secondary">
+          ${onPlay && onSelectPinch ? `<button class="text-button subject-pinch" data-id="${s.id}">Pastillero (pinza)</button>` : ''}
+          ${onSelectPinch || onPlay ? `<button class="text-button subject-legacy" data-id="${s.id}">Sesión anterior de 3 juegos</button>` : ''}
         </div>
-        <div class="subject-action">
-          <span>Seleccionar</span>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-        </div>
-      </button>
+      </div>
     `).join('');
   }
 
@@ -91,7 +97,17 @@ export async function showDashboard(container, onSelectSubject, onCreateSubject,
   subjectCards.forEach(card => {
     card.addEventListener('click', () => {
       const subjectId = card.dataset.id;
-      gsap.to(dashScreen, { opacity: 0, scale: 0.98, duration: 0.4, onComplete: () => onSelectSubject(subjectId) });
+      gsap.to(dashScreen, { opacity: 0, scale: 0.98, duration: 0.4, onComplete: () => (onPlay || onSelectPinch || onSelectSubject)(subjectId) });
+    });
+  });
+  container.querySelectorAll('.subject-pinch').forEach(button => {
+    button.addEventListener('click', () => {
+      gsap.to(dashScreen, { opacity: 0, duration: 0.3, onComplete: () => onSelectPinch(button.dataset.id) });
+    });
+  });
+  container.querySelectorAll('.subject-legacy').forEach(button => {
+    button.addEventListener('click', () => {
+      gsap.to(dashScreen, { opacity: 0, duration: 0.3, onComplete: () => onSelectSubject(button.dataset.id) });
     });
   });
 }

@@ -1,0 +1,24 @@
+/* Pantallas de «El viaje del zorro» (inicio, transiciones y final). */
+.pack-card { max-width: 30rem; }
+/* La tarjeta va arriba para que se vea al zorro corriendo por el bosque debajo. */
+.pack-app .pack-card { top: 6vh; transform: translateX(-50%); max-height: 60vh; padding: 20px 28px; }
+.pack-app .pack-card h1 { margin: .2rem 0 .4rem; }
+.pack-steps { display: flex; justify-content: center; gap: .6rem; margin: 1rem 0 .4rem; padding: 0; list-style: none; flex-wrap: wrap; }
+.pack-steps li { display: flex; align-items: center; gap: .4rem; padding: .3rem .7rem .3rem .35rem; font-weight: 800; font-size: .95rem;
+  border: 3px solid var(--ink); background: #efe3cc; color: #8a7a60; box-shadow: 3px 3px 0 rgba(42, 27, 23, .25); }
+.pack-steps li span { display: inline-grid; place-items: center; width: 1.5rem; height: 1.5rem; background: #d9c7a6; color: var(--paper); font-size: .85rem; }
+.pack-steps li.is-current { background: var(--paper); color: var(--ink); }
+.pack-steps li.is-current span { background: var(--fox); }
+.pack-steps li.is-done { color: var(--ink); }
+.pack-steps li.is-done span { background: #6cae4f; }
+.pack-bar { height: .7rem; margin: 1rem auto .2rem; max-width: 18rem; border: 3px solid var(--ink); background: #efe3cc; }
+.pack-bar span { display: block; height: 100%; width: 0; background: var(--fox); animation: pack-fill var(--pack-ms, 6s) linear forwards; }
+@keyframes pack-fill { to { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .pack-bar span { animation-duration: var(--pack-ms, 6s); } }
+
+/* Comprobación de encuadre: vista previa de la cámara (solo antes de empezar). */
+.pack-app .pack-card--framing { max-height: 92vh; top: 4vh; }
+.pack-preview { margin: .6rem auto; width: min(320px, 70vw); border: 4px solid var(--ink); background: var(--ink); line-height: 0; }
+.pack-preview canvas { width: 100%; height: auto; }
+.pack-hint { font-size: 1.25rem; font-weight: 800; color: var(--fox-dark); margin: .4rem 0; min-height: 1.6em; }
+.pack-hint.is-ok { color: #3f8a2c; }

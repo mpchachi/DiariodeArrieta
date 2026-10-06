@@ -578,6 +578,10 @@ canvas#main, canvas#jarra-canvas, canvas#interruptores-canvas {
 .subjects-list {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;
 }
+.subject-entry { display: flex; flex-direction: column; gap: 12px; }
+.subject-entry .subject-card { width: 100%; flex: 1; }
+.subject-entry .subject-legacy { align-self: flex-start; }
+.subject-secondary { display: flex; flex-wrap: wrap; gap: 4px 16px; }
 .subject-card {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);

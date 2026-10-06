@@ -19,6 +19,7 @@ const DAY_COLORS = ['#d94f4f', '#e8a838', '#6bab7d', '#5a8fc7', '#9b7dc7', '#d4a
 export class Pillbox {
   constructor(scene) {
     this._scene = scene;
+    this._disposed = false;
     this._compartments = [];
     this._ghostMeshes = [];
     this._group = new THREE.Group();
@@ -102,6 +103,7 @@ export class Pillbox {
   _loadLabels() {
     const loader = new FontLoader();
     loader.load('/fonts/helvetiker_bold.typeface.json', (font) => {
+      if (this._disposed) return;
       const startX = -TOTAL_W / 2 + COMP_W / 2;
 
       for (let i = 0; i < 7; i++) {
@@ -134,6 +136,10 @@ export class Pillbox {
         this._group.add(textMesh);
       }
     });
+  }
+
+  dispose() {
+    this._disposed = true;
   }
 
   getSlotPositionForType(compartmentIndex, pillType, compartments) {
@@ -194,6 +200,7 @@ export class Pillbox {
 
   setDayComplete(index, complete) {
     const comp = this._compartments[index];
+    comp.mesh.material.dispose();
     comp.mesh.material = complete ? COMPARTMENT_DONE_MAT.clone() : COMPARTMENT_MAT.clone();
   }
 
@@ -201,6 +208,7 @@ export class Pillbox {
     for (const m of this._ghostMeshes) {
       this._group.remove(m);
       m.geometry.dispose();
+      m.material.dispose();
     }
     this._ghostMeshes = [];
 

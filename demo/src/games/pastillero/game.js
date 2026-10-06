@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+export { startPinchGame as startPastilleroGame } from './pinchGame.js';
 import { createScene } from '../../engine/scene.js';
 import { createFloor } from '../../objects/floor.js';
 import { Pillbox } from '../../objects/pillbox.js';
@@ -13,7 +14,7 @@ import { createClinicalButton, removeClinicalButton, openClinicalView } from '..
 import { BiomarkerAccumulator } from '../../clinical/sessionMetrics.js';
 import { recordGame } from '../../clinical/sessionRecorder.js';
 
-export function startPastilleroGame(container) {
+export function startLegacyPastilleroGame(container) {
   container.innerHTML = `
     <canvas id="main"></canvas>
     <div id="pip">
@@ -235,7 +236,7 @@ export function startPastilleroGame(container) {
     handTracker.stop();
     clinicalCleanup = openClinicalView(container, () => {
       clinicalCleanup = null;
-      startPastilleroGame(container);
+      startLegacyPastilleroGame(container);
     });
   });
 

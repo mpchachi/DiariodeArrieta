@@ -1,7 +1,8 @@
 import gsap from 'gsap';
-import { startPastilleroGame } from './games/pastillero/game.js';
+import { startPastilleroGame, startLegacyPastilleroGame } from './games/pastillero/game.js';
 import { startJarraGame } from './games/jarra/game.js';
 import { startInterruptoresGame } from './games/interruptores/game.js';
+import { startFoxJourney } from './pack/pack.js';
 import { showTetrisLoader } from './tetrisLoader.js';
 import { waitForNext } from './ui/nextButton.js';
 import { startPlaythrough, commitPlaythrough, setActiveSubject } from './clinical/sessionRecorder.js';
@@ -14,7 +15,7 @@ const app = document.getElementById('app');
 const DEMO_SEQUENCE = ['pastillero', 'jarra', 'interruptores'];
 
 function startGame(name) {
-  if (name === 'pastillero') return startPastilleroGame(app);
+  if (name === 'pastillero') return startLegacyPastilleroGame(app);
   if (name === 'jarra') return startJarraGame(app);
   if (name === 'interruptores') return startInterruptoresGame(app);
 }
@@ -61,6 +62,13 @@ function renderDashboard() {
     },
     () => {
       renderLogin();
+    },
+    (subjectId) => {
+      startPastilleroGame(app, { subjectId, onExit: renderDashboard });
+    },
+    (subjectId) => {
+      // «El viaje del zorro»: carrera (pinza) → globo (puño) → huerto (giro), con transiciones automáticas.
+      startFoxJourney(app, { subjectId, onExit: renderDashboard, onDone: renderDashboard });
     }
   );
 }
