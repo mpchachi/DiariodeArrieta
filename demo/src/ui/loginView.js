@@ -1,25 +1,14 @@
 import gsap from 'gsap';
 import { login } from '../database/auth.js';
 
-// Puntos de la mano (los 21 landmarks que detecta la cámara) para la ilustración del panel.
-const HAND = [[50, 92], [36, 84], [27, 72], [21, 61], [15, 52], [37, 54], [33, 39], [31, 29], [30, 20], [48, 51], [47, 34],
-  [46, 23], [46, 13], [58, 53], [60, 38], [61, 28], [62, 19], [67, 57], [71, 46], [74, 38], [76, 31]];
-const BONES = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12], [9, 13],
-  [13, 14], [14, 15], [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17]];
-const handSvg = () => `
-  <svg class="login-hand" viewBox="0 0 100 100" aria-hidden="true">
-    ${BONES.map(([a, b]) => `<line x1="${HAND[a][0]}" y1="${HAND[a][1]}" x2="${HAND[b][0]}" y2="${HAND[b][1]}" />`).join('')}
-    ${HAND.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${[4, 8, 12, 16, 20].includes(i) ? 1.9 : 1.4}" style="--d:${(i * 0.09).toFixed(2)}s" />`).join('')}
-  </svg>`;
-
 export function showLogin(container, onLoginSuccess) {
-  const logo = `${import.meta.env.BASE_URL}dashboard/logo.png`;
+  const base = import.meta.env.BASE_URL;
+  const logo = `${base}dashboard/logo.png`;
   container.innerHTML = `
     <div class="auth-screen login-screen">
       <div class="login-card">
-        <aside class="login-brand">
+        <aside class="login-brand" style="--login-photo: url('${base}login-panel.jpg')">
           <div class="login-logo"><img src="${logo}" alt="" /><span>FixedGap</span></div>
-          ${handSvg()}
           <div class="login-pitch">
             <h2>Telemonitorización motora tras un ictus.</h2>
             <p>Juegos en casa con la cámara del ordenador y métricas objetivas para el equipo clínico.</p>
