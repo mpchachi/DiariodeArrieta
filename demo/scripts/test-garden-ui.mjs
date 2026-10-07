@@ -86,6 +86,7 @@ try {
   await page.locator('[data-action=done]').click();
   assert.equal(await page.evaluate(() => window.doneResult?.game), 'garden');
   assert.equal(r.hand, 'Right');
+  if (process.env.RESULTS_DIR) (await import('node:fs')).writeFileSync(`${process.env.RESULTS_DIR}/garden.json`, JSON.stringify(r));
   assert.deepEqual(errors, []);
   console.log('Garden UI OK:', JSON.stringify({ ...r.summary, durationS: Math.round(r.durationMs / 1000) }));
 } finally {

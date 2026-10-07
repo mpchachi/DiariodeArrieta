@@ -37,9 +37,9 @@ const metricsByDomain: Record<Domain, MetricConfig[]> = {
 };
 
 const domainLabels: Record<Domain, { title: string; game: string; color: string }> = {
-  proximal: { title: 'Mano distal', game: 'Organizar pastillas', color: '#D4695C' },
-  distal: { title: 'Extensión / coordinación', game: 'Apagar lámpara', color: '#3D9B8F' },
-  pronosup: { title: 'Pronosupinación', game: 'Girar jarra', color: '#5B8EC4' },
+  proximal: { title: 'Mano distal', game: 'La carrera (pinza)', color: '#D4695C' },
+  distal: { title: 'Extensión / coordinación', game: 'El globo (puño)', color: '#3D9B8F' },
+  pronosup: { title: 'Pronosupinación', game: 'El huerto (giro)', color: '#5B8EC4' },
 };
 
 interface Props {

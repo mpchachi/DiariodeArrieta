@@ -36,3 +36,7 @@ Thumbs.db
 miapikey.txt
 .env
 .env.*
+
+# Build de la plataforma para Vercel
+dist-vercel/
+.vercel/

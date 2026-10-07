@@ -3,6 +3,8 @@
 // típico con el portátil delante). Aquí se evalúa el encuadre a partir de los
 // landmarks y se da una indicación sencilla. Puro (sin DOM).
 
+import { isPlausibleHand } from '../vision/hands.js';
+
 export const FRAMING = Object.freeze({
   edge: 0.03, // a menos de esto del borde = cortada
   maxHeight: 0.62, // más alta que esto = demasiado cerca
@@ -36,7 +38,9 @@ export function framingHint({ box = null, detected = false, luminance = 120 } = 
 export class FramingTracker {
   constructor() { this.box = null; this.seenAt = null; this.detected = false; this.luminance = 120; }
   update(frame) {
-    const hand = frame.hands?.[0];
+    // Con dos manos en imagen, se evalúa la plausible más grande (la del paciente, más cerca).
+    const hand = (frame.hands || []).filter(h => isPlausibleHand(h, frame.width || 640, frame.height || 480).ok)
+      .map(h => ({ h, b: handBox(h.landmarks) })).sort((a, b) => b.b.h - a.b.h)[0]?.h;
     this.detected = !!hand; this.luminance = frame.luminance ?? 120;
     if (hand) { this.box = handBox(hand.landmarks); this.seenAt = frame.t; }
     return this.hint();

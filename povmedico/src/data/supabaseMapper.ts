@@ -31,10 +31,13 @@ export function mapSupabaseSubject(subject: any): Patient {
 // Maps rows from the `sessions` and `game_results` tables in Supabase to the `Session` interface
 export function mapSupabaseSession(sessionRow: any, gameResultRows: any[]): Session {
   const games: GameResult[] = gameResultRows.map((gr: any) => {
-    let gameId: GameId = 'slingshot';
-    if (gr.game_key === 'pastillero') gameId = 'slingshot';
-    if (gr.game_key === 'interruptores') gameId = 'flappy';
-    if (gr.game_key === 'jarra') gameId = 'water';
+    // Dominios del dashboard: pinza/agarre («slingshot»), flexo-extensión («flappy») y
+    // pronosupinación («water»). Juegos antiguos y capítulos del viaje del zorro.
+    const GAME_DOMAIN: Record<string, GameId> = {
+      pastillero: 'slingshot', interruptores: 'flappy', jarra: 'water',
+      fox_runner: 'slingshot', fox_balloon: 'flappy', fox_garden: 'water',
+    };
+    const gameId: GameId = GAME_DOMAIN[gr.game_key] ?? 'slingshot';
 
     const enriched: EnrichedColumns = {
       sparcMean: gr.sparc_mean ?? null,

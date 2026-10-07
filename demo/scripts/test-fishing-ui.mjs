@@ -59,11 +59,11 @@ try {
   if (shots) await page.screenshot({ path: `${shots}/fishing-title.png` });
   await runUntil(s => s.enginePhase === 'calib-up', 8000, 'calibración reposo');
   if (shots) await page.screenshot({ path: `${shots}/fishing-calib.png` });
-  await runUntil(s => s.enginePhase === 'cast', 20000, 'fin de calibración');
+  await runUntil(s => !s.enginePhase.startsWith('calib'), 20000, 'fin de calibración');
   const cal = (await state()).calib;
   assert.ok(Math.abs(cal.extRange - 40) < 4 && Math.abs(cal.flexRange - 40) < 4, JSON.stringify(cal));
   if (shots) await page.screenshot({ path: `${shots}/fishing-cast.png` });
-  await runUntil(s => s.enginePhase === 'wait', 5000, 'lanzar');
+  await runUntil(s => ['wait', 'bite'].includes(s.enginePhase), 5000, 'lanzar');
   await page.clock.runFor(1800);
   if (shots) await page.screenshot({ path: `${shots}/fishing-wait.png` });
   await runUntil(s => s.enginePhase === 'bite', 10000, 'picada');

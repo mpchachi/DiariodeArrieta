@@ -18,7 +18,7 @@ function Loading() {
 
 export function Router() {
   return (
-    <BrowserRouter basename="/dashboard">
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <Layout>
         <Suspense fallback={<Loading />}>
           <Routes>

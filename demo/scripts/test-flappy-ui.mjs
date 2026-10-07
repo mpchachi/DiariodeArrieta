@@ -69,6 +69,7 @@ try {
   if (shots) await page.screenshot({ path: `${shots}/flappy-end.png` });
   await page.locator('[data-action=done]').click();
   assert.equal(await page.evaluate(() => window.doneResult?.game), 'flappy');
+  if (process.env.RESULTS_DIR) (await import('node:fs')).writeFileSync(`${process.env.RESULTS_DIR}/flappy.json`, JSON.stringify(r));
   assert.deepEqual(errors, []);
   console.log('Flappy UI OK:', JSON.stringify({ ...r.summary, metrics: r.metrics }));
 } finally {

@@ -13,6 +13,7 @@ import { startGardenGame } from '../garden/game.js';
 import { createSharedCamera } from './sharedCamera.js';
 import { TravelScene } from './travel.js';
 import { FramingTracker } from './framing.js';
+import { uploadJourney } from '../database/uploadJourney.js';
 import { getSeason, advanceSeason } from '../runner/progress.js';
 import { SEASONS } from '../pixel/seasons.js';
 
@@ -24,11 +25,12 @@ export const CHAPTERS = [
 const INTERLUDE_MS = 6500;
 const HAND_KEY = 'fixedgap_garden_hand';
 
-export function startFoxJourney(container, { subjectId = null, onExit = null, onDone = null, createCamera = createSharedCamera } = {}) {
+// `saveJourney`: guarda el viaje en Supabase al terminar (inyectable en pruebas).
+export function startFoxJourney(container, { subjectId = null, onExit = null, onDone = null, createCamera = createSharedCamera, saveJourney = uploadJourney } = {}) {
   const camera = createCamera();
   const season = getSeason(subjectId);
   const results = {};
-  let stopCurrent = null, timer = null, disposed = false, hand = null;
+  let stopCurrent = null, timer = null, disposed = false, hand = null, startedAt = null;
 
   const clear = () => { clearTimeout(timer); timer = null; stopCurrent?.(); stopCurrent = null; };
   const exit = () => { dispose(); onExit?.(); };
@@ -137,6 +139,7 @@ export function startFoxJourney(container, { subjectId = null, onExit = null, on
 
   function play(i) {
     clear();
+    startedAt ??= new Date().toISOString();
     const next = ({ result }) => {
       results[CHAPTERS[i].key] = result ?? null;
       if (disposed) return;
@@ -157,6 +160,8 @@ export function startFoxJourney(container, { subjectId = null, onExit = null, on
       ['El globo', r.flappy ? `${r.flappy.summary.columns.cleared} / ${r.flappy.summary.columns.total} pasos` : '—'],
       ['El huerto', r.garden ? `${r.garden.summary.flowersBloomed} / ${r.garden.summary.flowersTotal} flores` : '—'],
     ];
+    // Acceso directo al dashboard del paciente (comodidad para el piloto, no es el flujo final).
+    const dashboardUrl = subjectId ? `${import.meta.env.BASE_URL}dashboard/patient/${encodeURIComponent(subjectId)}` : null;
     const root = screen(`
       <div class="runner-panel pack-card">
         <p class="runner-kicker">El viaje del zorro</p>
@@ -164,24 +169,41 @@ export function startFoxJourney(container, { subjectId = null, onExit = null, on
         ${steps(CHAPTERS.length)}
         <dl class="runner-stats">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
         <p class="runner-season-change">${to !== from ? `El bosque cambia: de ${from} a ${to}.` : ''}</p>
+        ${subjectId ? '<p class="pack-save" data-role="save">Guardando resultados…</p>' : ''}
         <div class="runner-actions">
-          <button type="button" class="runner-primary" data-action="done">${onDone ? 'Finalizar' : 'Volver a jugar'}</button>
+          ${dashboardUrl ? '<button type="button" class="runner-primary" data-action="dashboard">Ver en el dashboard</button>' : ''}
+          <button type="button" class="${dashboardUrl ? 'runner-secondary' : 'runner-primary'}" data-action="done">${onDone ? 'Volver a pacientes' : 'Volver a jugar'}</button>
         </div>
-        <button type="button" class="runner-link" data-action="export">Exportar datos del viaje (JSON)</button>
+        ${subjectId ? '<button type="button" class="runner-link" data-action="retry" hidden>Reintentar guardado</button>' : ''}
       </div>`);
     camera.dispose();
-    root.querySelector('[data-action="done"]').addEventListener('click', () => {
+    const saveEl = root.querySelector('[data-role="save"]'), retryBtn = root.querySelector('[data-action="retry"]');
+    let saving = null, saved = false;
+    const save = () => {
+      if (!subjectId || saved || saving) return saving;
+      saveEl.textContent = 'Guardando resultados…'; saveEl.className = 'pack-save'; if (retryBtn) retryBtn.hidden = true;
+      saving = Promise.resolve(saveJourney({ subjectId, startedAt, hand, results }))
+        .catch(e => ({ ok: false, error: String(e?.message ?? e) }))
+        .then(res => {
+          saving = null;
+          if (res?.ok) { saved = true; saveEl.textContent = '✓ Resultados guardados en la ficha del paciente.'; saveEl.className = 'pack-save is-ok'; }
+          else { saveEl.textContent = `No se han podido guardar los resultados: ${res?.error ?? 'error desconocido'}`; saveEl.className = 'pack-save is-error'; if (retryBtn) retryBtn.hidden = false; }
+          return res;
+        });
+      return saving;
+    };
+    void save();
+    retryBtn?.addEventListener('click', () => { void save(); });
+    // Antes de salir se espera a que termine el guardado (nunca se pierde una sesión por salir rápido).
+    const leave = async go => { const btns = root.querySelectorAll('.runner-actions button'); btns.forEach(b => { b.disabled = true; }); await saving; go(); };
+    root.querySelector('[data-action="dashboard"]')?.addEventListener('click', () => leave(() => { dispose(); window.location.href = dashboardUrl; }));
+    root.querySelector('[data-action="done"]').addEventListener('click', () => leave(() => {
       if (onDone) { dispose(); onDone(results); } else restart();
-    });
-    root.querySelector('[data-action="export"]').addEventListener('click', () => {
-      const data = { protocol: 'fixedgap-fox-journey-v1', subjectId, hand, season: from, createdAt: new Date().toISOString(), chapters: results };
-      const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
-      const a = document.createElement('a'); a.href = url; a.download = `fixedgap-viaje-${Date.now()}.json`; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    });
+    }));
+    container.foxJourney.saved = () => saved;
   }
 
-  function restart() { dispose(); startFoxJourney(container, { subjectId, onExit, onDone, createCamera }); }
+  function restart() { dispose(); startFoxJourney(container, { subjectId, onExit, onDone, createCamera, saveJourney }); }
   function dispose() { disposed = true; clear(); camera.dispose(); }
 
   intro();

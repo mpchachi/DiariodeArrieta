@@ -31,13 +31,10 @@ async function loadSupabaseData() {
       return mapSupabaseSession(sessionRow, relatedGames);
     });
 
-    // Remove ALPHA from mock data if we have real patients so we don't duplicate
-    const filteredMockPatients = cachedMockData.patients.filter(p => p.id !== 'pat-alpha');
-    const filteredMockSessions = cachedMockData.sessions.filter(s => s.patientId !== 'pat-alpha');
-
-    // Merge real data with mock data
-    mergedPatients = [...realPatients, ...filteredMockPatients];
-    mergedSessions = [...realSessions, ...filteredMockSessions];
+    // Solo datos de Supabase: pacientes reales y los de demostración (que ahora viven en la
+    // base de datos, compartidos por el equipo). Ya no se mezclan pacientes generados en código.
+    mergedPatients = realPatients;
+    mergedSessions = realSessions;
     loadedFromSupabase = true;
 
     // Set baseline session for real patients if available
@@ -51,9 +48,10 @@ async function loadSupabaseData() {
     });
 
   } catch (error) {
-    console.error('Error loading from Supabase, falling back to mock data:', error);
-    mergedPatients = cachedMockData.patients;
-    mergedSessions = cachedMockData.sessions;
+    // Sin datos falsos de respaldo: si falla Supabase se muestra vacío (y el error en consola).
+    console.error('Error cargando datos de Supabase:', error);
+    mergedPatients = [];
+    mergedSessions = [];
     loadedFromSupabase = true;
   }
 }

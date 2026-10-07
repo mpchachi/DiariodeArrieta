@@ -66,7 +66,6 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
         </div>
         <details class="runner-tech"><summary>Datos técnicos</summary>
           <dl data-role="end-tech"></dl>
-          <button type="button" class="runner-link" data-action="export">Exportar datos (JSON)</button>
         </details>
       </div>
 
@@ -128,7 +127,11 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
   setText(role('season-label'), `Estación del bosque: ${SEASONS[season].name}`);
 
   const camera = cameraFactory({ hand, onFrame: receive,
-    onStatus: message => { if (!disposed && phase === 'loading') setText(role('setup-text'), message); },
+    onStatus: message => {
+      if (disposed) return;
+      if (phase === 'loading') setText(role('setup-text'), message);
+      else if (phase === 'paused') setText(role('pause-text'), message); // p. ej. «Reconectando la cámara…»
+    },
     onError: message => {
       if (disposed) return;
       if (['playing', 'paused', 'finishing'].includes(phase)) finish(false);
@@ -211,6 +214,7 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     const span = frameTimes.at(-1) - frameTimes[0];
     fps = span > 0 ? (frameTimes.length - 1) * 1000 / span : 0;
     const selected = selector.select(frame);
+    if (selected.switched) controller.reset(); // otra mano: sin pinzas «heredadas»
     measurement = selected.hand ? measurePinch(selected.hand, frame, C.pinch)
       : { valid: false, eligible: false, ratio: null, reason: selected.reason };
     if (C.pinch.strictQuality && span >= 1000 && fps < C.pinch.minCaptureFps) measurement = { valid: false, eligible: false, ratio: null, reason: 'slow' };
@@ -466,12 +470,6 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     exitToTitle();
   });
   $('[data-action="mute"]').addEventListener('click', e => { e.currentTarget.textContent = `Sonido: ${audio.toggle() ? 'no' : 'sí'}`; });
-  $('[data-action="export"]').addEventListener('click', () => {
-    if (!result) return;
-    const url = URL.createObjectURL(new Blob([JSON.stringify(result)], { type: 'application/json' }));
-    const link = document.createElement('a'); link.href = url; link.download = `${C.protocol}-${Date.now()}.json`; link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  });
   const keydown = e => {
     if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') { e.preventDefault(); const d = $('.runner-debug'); d.open = !d.open; }
   };

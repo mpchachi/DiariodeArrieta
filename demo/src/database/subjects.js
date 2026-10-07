@@ -30,11 +30,13 @@ export async function listSubjects() {
     .from('subjects')
     .select('*')
     .eq('is_active', true)
-    .eq('operator_id', user.id)
+    // Sin filtro por médico: la base de datos (RLS) ya devuelve los pacientes del equipo.
     .order('created_at', { ascending: false });
 
   if (error) return [];
-  return data;
+  // Los pacientes de demostración (patient_data.demo) solo se ven en el dashboard, no en la
+  // lista del operador: aquí solo aparecen los creados a mano desde la interfaz.
+  return data.filter(s => s.patient_data?.demo !== true);
 }
 
 export async function getSubject(subjectId) {

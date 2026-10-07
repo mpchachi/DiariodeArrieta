@@ -17,6 +17,7 @@ import { storeSession, getSeason } from '../runner/progress.js';
 import { createAudio } from '../runner/audio.js';
 import { SEASONS } from '../pixel/seasons.js';
 import { FramingTracker } from '../pack/framing.js';
+import { HandTracker } from '../vision/hands.js';
 
 const SESSIONS_KEY = 'fixedgap_garden_sessions', HAND_KEY = 'fixedgap_garden_hand';
 const savedHand = () => { try { return localStorage.getItem(HAND_KEY) === 'Left' ? 'Left' : 'Right'; } catch { return 'Right'; } };
@@ -54,8 +55,7 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
         <h1 data-role="end-title">¡Huerto florecido!</h1>
         <dl class="runner-stats" data-role="end-stats"></dl>
         <div class="runner-actions"><button type="button" class="runner-primary" data-action="done">${onDone ? 'Finalizar' : 'Volver a jugar'}</button></div>
-        <details class="runner-tech"><summary>Datos técnicos</summary><dl data-role="end-tech"></dl>
-          <button type="button" class="runner-link" data-action="export">Exportar datos (JSON)</button></details>
+        <details class="runner-tech"><summary>Datos técnicos</summary><dl data-role="end-tech"></dl></details>
       </div>
       <details class="runner-debug"><summary>Depuración · Ctrl + Mayús + D</summary><pre></pre></details>
     </section>`;
@@ -75,6 +75,7 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
   let engine = new GardenEngine(C, { pourSign: hand === 'Right' ? -1 : 1 });
   const audio = createAudio();
   const framing = new FramingTracker();
+  const tracker = new HandTracker();
   const smoother = new HandSmoother({ emaAlpha: 0.6, maxLostFrames: 8 });
   const filter = new TiltFilter(C.tiltAlpha, C.minQuality);
   let phase = 'loading', disposed = false, raf = null, last = performance.now(), startedAt = null, startWall = null;
@@ -83,7 +84,7 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
 
   // Cualquier mano visible (la de más confianza): sirve para derecha e izquierda.
   const camera = cameraFactory({ hand: 'Right', onFrame: receive,
-    onStatus: m => { if (!disposed && phase === 'loading') setText(role('status'), m); },
+    onStatus: m => { if (disposed) return; if (phase === 'loading') setText(role('status'), m); else if (phase === 'paused') setText(role('pause-hint'), m); },
     onError: m => { if (disposed) return; if (phase === 'playing' || phase === 'paused') finish(false); phase = 'error'; role('loading').hidden = false; setText(role('status'), m); } });
 
   function receive(frame) {
@@ -94,7 +95,9 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
     if (phase === 'paused') setText(role('pause-hint'), hint.ok ? 'Mantén la mano así un momento…' : hint.text);
     if (phase !== 'playing' && phase !== 'paused') return;
     attempted++;
-    const picked = [...frame.hands].sort((a, b) => b.score - a.score)[0] ?? null;
+    // Siempre la misma mano (la otra o la de otra persona no roban el control).
+    const sel = tracker.select(frame), picked = sel.hand;
+    if (sel.switched) { smoother.reset(); filter.reset(); }
     const pts = smoother.smooth(picked?.landmarks ?? null);
     raw = pts ? knuckleTilt(pts, frame.width, frame.height) : null;
     const angle = filter.update(raw, frame.t);
@@ -195,12 +198,6 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
   $('[data-action="skip"]')?.addEventListener('click', () => {
     if (phase === 'playing' || phase === 'paused') finish(false);
     const r = result; cleanup(); onComplete({ result: r, skipped: true });
-  });
-  $('[data-action="export"]').addEventListener('click', () => {
-    if (!result) return;
-    const url = URL.createObjectURL(new Blob([JSON.stringify(result)], { type: 'application/json' }));
-    const a = document.createElement('a'); a.href = url; a.download = `${C.protocol}-${Date.now()}.json`; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 
   // Empieza cuando hay mano elegida y cámara lista.

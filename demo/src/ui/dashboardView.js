@@ -86,7 +86,7 @@ export async function showDashboard(container, onSelectSubject, onCreateSubject,
   });
 
   document.getElementById('goto-dashboard-btn').addEventListener('click', () => {
-    window.location.href = '/dashboard/';
+    window.location.href = `${import.meta.env.BASE_URL}dashboard/`;
   });
 
   document.getElementById('new-subject-btn').addEventListener('click', () => {

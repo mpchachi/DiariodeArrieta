@@ -10,13 +10,15 @@
     "build": "vite build",
     "preview": "vite preview",
     "assets:pinch": "node scripts/prepare-pinch-assets.mjs",
-    "test": "node --test src/games/pastillero/*.test.js src/runner/*.test.js src/flappy/*.test.js src/fishing/*.test.js src/garden/*.test.js",
+    "test": "node --test src/games/pastillero/*.test.js src/runner/*.test.js src/flappy/*.test.js src/fishing/*.test.js src/garden/*.test.js src/vision/*.test.js src/pack/*.test.js",
     "test:ui": "node scripts/test-pinch-ui.mjs",
     "test:runner-ui": "node scripts/test-runner-ui.mjs",
     "test:flappy-ui": "node scripts/test-flappy-ui.mjs",
     "test:fishing-ui": "node scripts/test-fishing-ui.mjs",
     "test:garden-ui": "node scripts/test-garden-ui.mjs",
-    "test:pack-ui": "node scripts/test-pack-ui.mjs"
+    "test:pack-ui": "node scripts/test-pack-ui.mjs",
+    "test:camera": "node scripts/test-camera-robustness.mjs",
+    "build:web": "node scripts/build-for-web.mjs"
   },
   "keywords": [],
   "author": "",

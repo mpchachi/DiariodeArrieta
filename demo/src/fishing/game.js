@@ -46,8 +46,7 @@ export function startFishingGame(container, { subjectId = null, onExit = null, o
         <h1 data-role="end-title">¡Cubo lleno!</h1>
         <dl class="runner-stats" data-role="end-stats"></dl>
         <div class="runner-actions"><button type="button" class="runner-primary" data-action="done">${onDone ? 'Finalizar' : 'Volver a pescar'}</button></div>
-        <details class="runner-tech"><summary>Datos técnicos</summary><dl data-role="end-tech"></dl>
-          <button type="button" class="runner-link" data-action="export">Exportar datos (JSON)</button></details>
+        <details class="runner-tech"><summary>Datos técnicos</summary><dl data-role="end-tech"></dl></details>
       </div>
       <details class="runner-debug"><summary>Depuración · Ctrl + Mayús + D</summary><pre></pre></details>
     </section>`;
@@ -80,7 +79,8 @@ export function startFishingGame(container, { subjectId = null, onExit = null, o
     lastFrame = frame;
     if (phase !== 'playing' && phase !== 'paused') return;
     attempted++;
-    const picked = selector.select(frame).hand;
+    const sel = selector.select(frame), picked = sel.hand;
+    if (sel.switched) { smoother.reset(); filter.reset(); } // otra mano: no mezclar
     const pts = smoother.smooth(picked?.landmarks ?? null);
     rawAngle = pts ? wristTilt(pts, frame.width, frame.height, C.extensionSign) : null;
     const angle = filter.update(rawAngle, frame.t);
@@ -192,12 +192,6 @@ export function startFishingGame(container, { subjectId = null, onExit = null, o
     if (onExit) onExit(); else startFishingGame(container, { subjectId, onExit, onDone, cameraFactory });
   });
   $('[data-action="mute"]').addEventListener('click', e => { e.currentTarget.textContent = `Sonido: ${audio.toggle() ? 'no' : 'sí'}`; });
-  $('[data-action="export"]').addEventListener('click', () => {
-    if (!result) return;
-    const url = URL.createObjectURL(new Blob([JSON.stringify(result)], { type: 'application/json' }));
-    const a = document.createElement('a'); a.href = url; a.download = `${C.protocol}-${Date.now()}.json`; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  });
 
   raf = requestAnimationFrame(loop);
   (async () => {

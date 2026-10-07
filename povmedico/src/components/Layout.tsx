@@ -10,7 +10,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <aside className="fixed top-0 left-0 h-screen w-[230px] bg-clay-surface-solid border-r border-clay-border flex flex-col z-50 shadow-clay">
         {/* Logo */}
         <Link to="/" className="px-5 h-[72px] flex items-center gap-3 border-b border-clay-border no-underline hover:bg-clay-surface-hover transition-colors">
-          <img src="/logo.png" alt="FixedGap" className="w-9 h-9 rounded-xl object-cover shadow-clay" />
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="FixedGap" className="w-9 h-9 rounded-xl object-cover shadow-clay" />
           <span className="font-display font-extrabold text-txt text-[18px] tracking-tight">FixedGap</span>
         </Link>
 
@@ -29,7 +29,8 @@ export function Layout({ children }: { children: ReactNode }) {
         {/* Actions */}
         <div className="px-4 py-4 mt-auto">
           <a
-            href="/"
+            // Vuelve a la app del operador (la carpeta superior al dashboard: «/» o «/plataforma/»).
+            href={import.meta.env.BASE_URL.replace(/dashboard\/$/, '')}
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-medium text-txt bg-clay-surface border border-clay-border hover:bg-clay-surface-hover hover:-translate-y-0.5 transition-all duration-300 shadow-clay w-full no-underline"
           >
             <span className="w-5 h-5 flex items-center justify-center text-accent">

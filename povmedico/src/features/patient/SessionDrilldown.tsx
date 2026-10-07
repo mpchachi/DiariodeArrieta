@@ -27,7 +27,7 @@ export function SessionDrilldown({ sessionId }: Props) {
       {/* Metrics summary (always shown) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         {session.games.map(game => {
-          const gameLabels: Record<string, string> = { slingshot: 'Organizar pastillas', flappy: 'Apagar lámpara', water: 'Girar jarra' };
+          const gameLabels: Record<string, string> = { slingshot: 'La carrera (pinza)', flappy: 'El globo (puño)', water: 'El huerto (giro)' };
           const gameColors: Record<string, string> = { slingshot: colors.proximal, flappy: colors.distal, water: colors.pronosup };
 
           return (
@@ -58,7 +58,7 @@ export function SessionDrilldown({ sessionId }: Props) {
             {session.games.map(game => {
               if (!game.frames || game.frames.length === 0) return null;
 
-              const gameLabels: Record<string, string> = { slingshot: 'Organizar pastillas', flappy: 'Apagar lámpara', water: 'Girar jarra' };
+              const gameLabels: Record<string, string> = { slingshot: 'La carrera (pinza)', flappy: 'El globo (puño)', water: 'El huerto (giro)' };
               const gameColors: Record<string, string> = { slingshot: colors.proximal, flappy: colors.distal, water: colors.pronosup };
 
               let dataKey: string;

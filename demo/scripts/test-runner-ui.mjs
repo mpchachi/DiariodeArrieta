@@ -114,6 +114,7 @@ try {
     await page.evaluate(() => { document.querySelector('[data-panel=title]').hidden = true; });
     if (shots) await page.screenshot({ path: `${shots}/runner-season-${s}.png` });
   }
+  if (process.env.RESULTS_DIR) (await import('node:fs')).writeFileSync(`${process.env.RESULTS_DIR}/runner.json`, JSON.stringify(r));
   assert.deepEqual(errors, []);
   console.log('Runner UI OK:', JSON.stringify({ cleared: r.summary.obstacles.cleared, berries: r.summary.berries, timing: r.summary.timing.medianAbsErrorMs, cycles: r.summary.pinch.cycles }));
 } finally {

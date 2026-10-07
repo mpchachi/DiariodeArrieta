@@ -5,15 +5,17 @@
 // la cámara ve el puño de frente durante todo el giro (pronación/supinación).
 // Puro (sin DOM).
 
+import { handSize } from '../vision/hands.js';
+
 export function knuckleTilt(landmarks, width, height) {
   if (!landmarks || landmarks.length < 21 || !(width > 0 && height > 0)) return null;
   const a = landmarks[5], b13 = landmarks[13], b17 = landmarks[17];
   const bx = (b13.x + b17.x) / 2, by = (b13.y + b17.y) / 2;
   const dx = (bx - a.x) * width, dy = (by - a.y) * height;
   const len = Math.hypot(dx, dy);
-  // Tamaño de referencia de la mano: muñeca → nudillo medio.
-  const w = landmarks[0], m = landmarks[9];
-  const size = Math.hypot((m.x - w.x) * width, (m.y - w.y) * height);
+  // Tamaño de referencia que no se colapsa en escorzo (puño de jarra con el antebrazo
+  // hacia la cámara): solo baja la calidad cuando la mano se pone de canto.
+  const size = handSize(landmarks, width, height);
   if (!(len > 1e-3) || !(size > 1e-3)) return null;
   return { angle: Math.atan2(-dx, dy) * 180 / Math.PI, quality: Math.min(1, len / (size * 0.45)) };
 }

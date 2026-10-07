@@ -159,6 +159,62 @@ Hecho: Runner completo en `demo/src/runner/`, conectado a «Jugar». Pasan tests
   - Pantalla «Coloca la mano» al inicio del viaje: única vista de cámara, con zona guía y caja de la mano. Avanza sola tras 1,5 s bien colocada y tiene «Continuar sin comprobar».
   - En pausa, los 3 juegos explican por qué se perdió la mano (p. ej. «Aleja un poco la mano»), según la última caja vista.
 
+2026-10-07, visión por computador blindada.
+- `RunnerCamera` (`runner/camera.js`) reescrita, sin heredar de `PinchCamera`; el Pastillero v2 no se toca.
+  - Reloj monótono: `t` = `performance.now()` por fotograma nuevo; antes se usaba el tiempo del vídeo, que vuelve a 0 al reconectar y bloqueaba la pinza.
+  - Recuperación automática:
+    - Pestaña oculta → solo pausa (antes daba error y dejaba el juego muerto).
+    - Pista terminada o cámara ocupada → reintentos con esperas crecientes (0,4/1/2/4/8 s).
+    - Vídeo congelado → un vigilante reconecta a los 2,5 s sin fotogramas.
+    - Fallo del modelo → lo recrea (1.º igual, 2.º en CPU). Error definitivo solo tras agotar reintentos y una sola vez.
+  - Mensajes específicos (p. ej. «la cámara la está usando otra aplicación»). Un error del juego en `onFrame` ya no tumba la cámara.
+  - 2 manos (`numHands: 2`); confianza 0,4.
+- `vision/hands.js`:
+  - `isPlausibleHand` descarta esqueletos imposibles (colapsados, huesos > 1,25 palmas, coordenadas absurdas, palma < 14 px, confianza < 0,35).
+  - `HandTracker` sigue siempre a la misma mano por continuidad espacial: la otra mano o la de otra persona no roban el control; los saltos de un fotograma se descartan y un cambio real se confirma en 3 fotogramas o tras 600 ms sin mano.
+  - Lo usan los 4 juegos (vía `HandSelector` o directo) y el encuadre. Con `switched` los juegos reinician filtros y la pinza.
+- En pausa, el estado de la cámara se muestra («Reconectando la cámara…»).
+- Pruebas: `npm run test:camera` (10 escenarios de fallo en navegador real) y `src/vision/vision.test.js`. Con el modelo real, todas las fotos de manos pasan la plausibilidad y con 2 manos el seguimiento no salta.
+
+2026-10-07, base de datos propia de FixedGap (Supabase `FixedGap-prod`, ref `fdpwlskazwezhhymanix`, Frankfurt).
+- MCP de Supabase configurado en `~/.config/devin/mcp_config.json` (servidor `supabase`).
+- Migraciones en `demo/database/migrations/` (001 esquema, 002 seguridad, 003 alta de médicos, 004 esquema privado), ya aplicadas.
+  - Mismo modelo que el producto anterior, con `game_key_type` ampliado con `fox_runner`, `fox_balloon` y `fox_garden`.
+  - RLS: cada médico ve solo sus pacientes, sesiones y resultados. Chat solo entre participantes, y solo el creador añade miembros. Nada sin sesión.
+  - Probado con 3 médicos simulados (transacción deshecha). El revisor de seguridad de Supabase no da avisos.
+- Alta de médicos: Authentication → Add user con `usuario@fixedgap.local` + «Auto Confirm». El trigger crea `operators`. Hay que desactivar el registro público.
+- `demo/.env` apunta a la base nueva (valores antiguos comentados; copia en `demo/.env.old-marco-backup`). El dashboard (`povmedico`) usa el mismo `.env` (`envDir: '../demo'`) y está recompilado.
+- Ojo: `npm run build` de povmedico falla por errores de tipos PREEXISTENTES en `*.test.ts` (`tsc -b`). Se compila con `npx vite build`. Hay que arreglarlo antes de Vercel.
+
+2026-10-07, publicada en **https://fixedgap.com/plataforma** (no enlazada desde la web; `noindex`).
+- Va dentro de la web de FixedGap (repo `mpchachi/fixedgap`, Next.js en Vercel, DNS en Porkbun) como build estático en `public/plataforma`.
+- `next.config.ts` de la web: reescrituras para la SPA del dashboard, `X-Robots-Tag: noindex` y `Permissions-Policy: camera=(self)`.
+- Para actualizar: `npm run build:web -- <ruta al repo de la web>` en `demo/`, después commit y push en la web (Vercel publica solo en ~90 s).
+- La app y el dashboard funcionan bajo cualquier ruta: `FIXEDGAP_BASE` en `vite.config` y todo con `import.meta.env.BASE_URL`.
+- Médicos: `DrGustavoArrieta` / `DrAndresGarcia` (contraseña `FixedGap123`, recreados en la base nueva) y `mateo`.
+- Pendiente: aplicar `005_teams.sql` (pacientes compartidos por equipo; preparado, sin aplicar).
+
+2026-10-07, regresión del huerto corregida (Mateo: «con la jarra ya no me la pilla»).
+- Causa: `isPlausibleHand` medía todo respecto a la longitud de la palma (muñeca → nudillo medio), que en postura de jarra (antebrazo hacia la cámara) se acorta mucho. Con la palma al ≤ 40 % se descartaba como «anatomía imposible» y el seguidor creía que cambiaba de mano.
+  - Medido con landmarks reales de un puño: el gesto de verter perdía 129 de 219 fotogramas y había 5 «cambios de mano».
+- Arreglo: `handSize` (máximo de muñeca→nudillos 5/9/17 y línea de nudillos ×1,25) en la plausibilidad, el seguimiento (salto de escala ×2,2) y la calidad de `knuckleTilt`. Centro de la mano = muñeca + 4 nudillos. Ahora acepta 219/219 fotogramas con 0 cambios de mano.
+- Tests con landmarks REALES (`src/vision/fixtures-real-hands.json`) en escorzo y giro. Publicado en fixedgap.com.
+
+2026-10-07, viaje → Supabase → dashboard (publicado en fixedgap.com/plataforma).
+- Equipos (`005_teams`, `006`): los médicos del mismo equipo («Equipo piloto»: Arrieta, García y mateo) comparten pacientes, sesiones y resultados. Nadie se cambia de equipo solo (solo puede editar `display_name`). La app ya no filtra pacientes por médico: lo hace RLS.
+- `pack/journeyRecord.js`: resultado de cada capítulo → fila de `game_results` (`fox_runner`/`fox_balloon`/`fox_garden`).
+  - Llena las columnas del esquema y `metrics_display` con las escalas del dashboard: pinza → `slingshot`, puño → `flappy`, giro → `water`.
+  - SPARC por movimiento; temblor solo en tramos quietos; brusquedad = submovimientos extra (0–6).
+  - Globo: `maxExtension` = 1 − fuerza mínima, activaciones por minuto y fatiga en %.
+- `database/uploadJourney.js`: crea la sesión y las 3 filas, con reintentos. El trigger marca la sesión completa.
+- Pantalla final: guarda sola («✓ Resultados guardados…» / error + «Reintentar»), botón «Ver en el dashboard» (`dashboard/patient/<id>`) y «Volver a pacientes». Se espera al guardado antes de salir. Sin exportar JSON en ningún juego.
+- Dashboard (`povmedico`):
+  - Mapea `fox_*` a los 3 dominios y solo muestra datos de Supabase (ya no mezcla pacientes del `mockGenerator`).
+  - Juegos renombrados: La carrera (pinza), El globo (puño), El huerto (giro).
+  - «Volver al Operador» respeta la base.
+- 8 pacientes de demostración (`PT-xxxx (demo)`, `patient_data.demo = true`), 59 sesiones y 177 resultados, creados por mateo vía API (`scripts/seed-demo-data.mjs --upload`; SQL en `database/seed/`). Para borrarlos: `DELETE FROM subjects WHERE patient_data->>'demo' = 'true'`.
+- Probado de punta a punta con Arrieta: ve los 8 de demo, guarda un viaje (3 filas, sesión completa) y aparece en su ficha del dashboard. La sesión de prueba se borró después.
+
 Pendiente / bugs vistos en el portátil de Mateo (Chrome, cámara real):
 1. **No detecta la mano** (2026-10-03, pendiente de confirmar con cámara real). Cambios hechos:
    - Vídeo a tamaño completo tapado por el lienzo.
@@ -180,4 +236,5 @@ Pendiente / bugs vistos en el portátil de Mateo (Chrome, cámara real):
 - `npm run test:fishing-ui` — pesca completa con paciente sintético (calibración, picada ignorada, pausa).
 - `npm run test:garden-ui` — huerto completo con puño sintético (mano derecha, pausa).
 - `npm run test:pack-ui` — viaje completo: inicio, transiciones automáticas, 3 capítulos y final.
+- `npm run test:camera` — robustez de la cámara (desconexión, vídeo congelado, fallo GPU, cámara ocupada, pestaña oculta…).
 - `npm run build`.

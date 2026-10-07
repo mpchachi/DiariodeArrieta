@@ -22,3 +22,8 @@
 .pack-preview canvas { width: 100%; height: auto; }
 .pack-hint { font-size: 1.25rem; font-weight: 800; color: var(--fox-dark); margin: .4rem 0; min-height: 1.6em; }
 .pack-hint.is-ok { color: #3f8a2c; }
+
+/* Estado del guardado en Supabase (pantalla final). */
+.pack-save { margin: .6rem 0 .2rem; font-weight: 800; color: #8a7a60; }
+.pack-save.is-ok { color: #3f8a2c; }
+.pack-save.is-error { color: #b5401f; }

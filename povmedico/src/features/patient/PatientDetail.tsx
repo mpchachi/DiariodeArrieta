@@ -131,7 +131,7 @@ export function PatientDetail() {
           <DomainCardWithBreakdown
             color="#D4695C"
             label="Precisión de pinza"
-            game="Organizar pastillas · M1"
+            game="La carrera (pinza) · M1"
             score={lastSession.derived.proximalGripScore}
             components={[
               { label: 'Precisión', value: lastSession.derived.proximalComponents.accuracy },
@@ -143,7 +143,7 @@ export function PatientDetail() {
           <DomainCardWithBreakdown
             color="#3D9B8F"
             label="Extensión del índice"
-            game="Apagar lámpara"
+            game="El globo (puño)"
             score={lastSession.derived.distalFlexExtScore}
             components={[
               { label: 'Extensión', value: lastSession.derived.distalComponents.extension },
@@ -155,7 +155,7 @@ export function PatientDetail() {
           <DomainCardWithBreakdown
             color="#5B8EC4"
             label="Rango de rotación"
-            game="Girar jarra · M4"
+            game="El huerto (giro) · M4"
             score={lastSession.derived.pronoSupScore}
             components={[
               { label: 'Supinación', value: lastSession.derived.pronoSupComponents.supination },

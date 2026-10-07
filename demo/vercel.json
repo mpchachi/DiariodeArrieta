@@ -1,0 +1,26 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm ci",
+  "buildCommand": "node scripts/build-for-web.mjs --vercel",
+  "outputDirectory": "dist-vercel",
+  "redirects": [
+    { "source": "/", "destination": "/plataforma/", "permanent": false }
+  ],
+  "rewrites": [
+    { "source": "/plataforma/dashboard/:path*", "destination": "/plataforma/dashboard/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
+        { "key": "Permissions-Policy", "value": "camera=(self \"https://fixedgap.com\" \"https://www.fixedgap.com\")" }
+      ]
+    },
+    {
+      "source": "/plataforma/pinch-assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+    }
+  ]
+}

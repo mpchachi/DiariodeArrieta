@@ -5,6 +5,7 @@
 // Puro (sin DOM): se prueba con node --test.
 
 import { RUNNER_CONFIG } from './config.js';
+import { HandTracker } from '../vision/hands.js';
 
 const DEFAULT = RUNNER_CONFIG.pinch;
 const distance = (a, b, width, height) => Math.hypot((a.x - b.x) * width, (a.y - b.y) * height);
@@ -51,17 +52,15 @@ function measureStrict(hand, frame, C) {
 }
 
 export class HandSelector {
-  constructor(hand = 'Right', C = DEFAULT) { this.C = C; this.hand = hand; this.previous = null; }
-  reset(hand = this.hand) { this.hand = hand; this.previous = null; }
+  constructor(hand = 'Right', C = DEFAULT) { this.C = C; this.hand = hand; this.previous = null; this.tracker = new HandTracker({ preferred: hand }); }
+  reset(hand = this.hand) { this.hand = hand; this.previous = null; this.tracker = new HandTracker({ preferred: hand }); }
   select(frame) {
     const C = this.C;
     if (!C.strictQuality) {
-      // Cualquier mano visible; si hay varias, la de la lateralidad elegida y más confianza.
-      const hands = (frame.hands || []).filter(h => h.landmarks?.length === 21);
-      if (!hands.length) return { hand: null, reason: 'missing' };
-      const preferred = hands.filter(h => h.handedness === this.hand);
-      const pick = (preferred.length ? preferred : hands).reduce((a, b) => (b.score > a.score ? b : a));
-      return { hand: pick, reason: 'ok' };
+      // Cualquier mano plausible, siguiendo SIEMPRE a la misma (ver vision/hands.js).
+      // `switched`: ha cambiado de mano → el juego debe reiniciar sus filtros.
+      const r = this.tracker.select(frame);
+      return { hand: r.hand, reason: r.hand ? 'ok' : r.reason, switched: r.switched };
     }
     const candidates = (frame.hands || []).filter(h => h.handedness === this.hand && h.score >= C.minHandedness && h.landmarks?.length === 21);
     if (!candidates.length) return { hand: null, reason: frame.hands?.some(h => h.handedness === this.hand) ? 'uncertain' : frame.hands?.length ? 'wrong' : 'missing' };

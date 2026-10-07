@@ -50,8 +50,7 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
           <dt>Choques</dt><dd data-role="end-hits"></dd>
         </dl>
         <div class="runner-actions">${onNext ? '<button type="button" class="runner-primary" data-action="next">Siguiente juego →</button>' : ''}<button type="button" class="${onNext ? 'runner-secondary' : 'runner-primary'}" data-action="done">${onDone ? 'Finalizar' : 'Volver a intentarlo'}</button></div>
-        <details class="runner-tech"><summary>Datos técnicos</summary><dl data-role="end-tech"></dl>
-          <button type="button" class="runner-link" data-action="export">Exportar datos (JSON)</button></details>
+        <details class="runner-tech"><summary>Datos técnicos</summary><dl data-role="end-tech"></dl></details>
       </div>
       <details class="runner-debug"><summary>Depuración · Ctrl + Mayús + D</summary><pre></pre></details>
     </section>`;
@@ -79,7 +78,7 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
   let session = null, result = null, countdownTimer = null, pausedAt = null, bubbleUntil = 0;
 
   const camera = cameraFactory({ hand, onFrame: receive,
-    onStatus: m => { if (!disposed && phase === 'loading') setText(role('status'), m); },
+    onStatus: m => { if (disposed) return; if (phase === 'loading') setText(role('status'), m); else if (phase === 'paused') setText(role('pause-hint'), m); },
     onError: m => { if (disposed) return; if (phase === 'playing' || phase === 'paused') finish(false); phase = 'error'; role('loading').hidden = false; setText(role('status'), m); } });
 
   function receive(frame) {
@@ -88,7 +87,8 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
     // En pausa, explica por qué no se ve la mano (demasiado cerca, en el borde, poca luz).
     const hint = framing.update(frame);
     if (phase === 'paused') setText(role('pause-hint'), hint.ok ? 'Mantén la mano así un momento…' : hint.text);
-    const picked = selector.select(frame).hand;
+    const sel = selector.select(frame), picked = sel.hand;
+    if (sel.switched) { smoother.reset(); worldSmoother.reset(); } // otra mano: no mezclar
     const smoothed = smoother.smooth(picked ? mapLandmarks(picked.landmarks) : null);
     const world = worldSmoother.smooth(picked?.world ?? null);
     // Control = puño real en 3D; el ratio del detector original se sigue registrando.
@@ -209,12 +209,6 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
     if (onComplete) onComplete({ result: r, skipped: true }); else onNext({ result: r, skipped: true });
   });
   $('[data-action="mute"]').addEventListener('click', e => { e.currentTarget.textContent = `Sonido: ${audio.toggle() ? 'no' : 'sí'}`; });
-  $('[data-action="export"]').addEventListener('click', () => {
-    if (!result) return;
-    const url = URL.createObjectURL(new Blob([JSON.stringify(result)], { type: 'application/json' }));
-    const a = document.createElement('a'); a.href = url; a.download = `${C.protocol}-${Date.now()}.json`; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  });
 
   raf = requestAnimationFrame(loop);
   (async () => {

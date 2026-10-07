@@ -2,7 +2,10 @@ import { defineConfig } from 'vite';
 import fs from 'fs';
 import path from 'path';
 
+// FIXEDGAP_BASE: ruta donde se publica la app (p. ej. «/plataforma/» dentro de fixedgap.com).
+// En desarrollo, «/». Todo lo interno usa import.meta.env.BASE_URL, así que funciona bajo cualquier ruta.
 export default defineConfig({
+  base: process.env.FIXEDGAP_BASE || '/',
   server: {
     open: true,
     // Fixed, stable origin so localStorage (Alpha's session history) persists
