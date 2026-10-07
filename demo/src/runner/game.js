@@ -1,6 +1,8 @@
 // «El Zorro de las Estaciones»: runner pixel controlado con la pinza pulgar–índice.
 // Pinza = saltar. Mantener la pinza en el aire = salto alto.
 // La cámara funciona oculta: nunca se muestra vídeo durante el juego.
+// Ronda introductoria: ante el primer tronco el mundo se detiene (fase `tutorial`) y una
+// mano animada enseña la pinza; la primera pinza real la quita y es el salto.
 
 import './runner.css';
 import { RUNNER_CONFIG as C, RUNNER_REASONS as REASONS } from './config.js';
@@ -13,6 +15,7 @@ import { getSeason, advanceSeason, storeSession } from './progress.js';
 import { RunnerCamera } from './camera.js';
 import { FramingTracker } from '../pack/framing.js';
 import { setPixelScale } from '../pixel/sprite.js';
+import { createGestureGuide } from '../tutorial/gestureGuide.js';
 
 const PRE_PLAY = ['title', 'loading', 'setup', 'armed', 'error'];
 
@@ -105,6 +108,7 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     return ictx ? { ictx, art: createArt(ictx, { width: 17, height: 18, groundY: 18 }) } : null;
   }).filter(Boolean);
   const audio = createAudio();
+  const guide = createGestureGuide(root);
   const course = buildCourse(C);
   const idealOffset = takeoffWindow({ x: 0, w: OBSTACLE.w, h: OBSTACLE.h }, C)?.ideal ?? null;
 
@@ -116,10 +120,11 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
   let measurement = { valid: false, eligible: false, ratio: null, reason: 'missing' };
   let pinchState = { state: 'acquiring', ready: false, held: false, event: null };
   let lastFrame = null, lastFrameWall = null, lastReadyWall = null, frameTimes = [], fps = 0;
-  let session = null, result = null, gameMs = 0, scroll = 0, bgScroll = 0, bubbleFor = null, fox = createFox();
+  let session = null, result = null, gameMs = 0, scroll = 0, bgScroll = 0, fox = createFox();
   let obstacles = [], berries = [], sparkles = [];
   let setupSince = 0, finishX = course.finishX, countdownTimer = null, pausedAt = null, resumeAt = null, finishedAt = null, foxHidden = false;
-  let tutorialShown = false;
+  // Ronda introductoria: `tutorialJumps` saltos guiados ante los primeros troncos.
+  let tutorialShown = false, tutorialJumps = 0, tutorialAt = null, tutorialMs = 0;
 
   const setText = (el, value) => { if (el && el.textContent !== value) el.textContent = value; };
   const show = name => ['title', 'setup', 'pause', 'end'].forEach(n => { panel(n).hidden = n !== name; });
@@ -134,9 +139,9 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     },
     onError: message => {
       if (disposed) return;
-      if (['playing', 'paused', 'finishing'].includes(phase)) finish(false);
+      if (['playing', 'tutorial', 'paused', 'finishing'].includes(phase)) finish(false);
       clearInterval(countdownTimer); controller.reset(); selector.reset();
-      phase = 'error'; show('setup');
+      phase = 'error'; show('setup'); guide.hide();
       setText(role('setup-title'), 'No puedo usar la cámara');
       setText(role('setup-text'), message);
     } });
@@ -145,7 +150,7 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     fox = createFox(); gameMs = 0; scroll = 0; sparkles = []; foxHidden = false;
     obstacles = course.obstacles.map(o => ({ ...o, hit: false, passed: false }));
     berries = course.berries.map(b => ({ ...b, taken: false }));
-    tutorialShown = false; bubbleFor = null;
+    tutorialShown = false; tutorialJumps = 0; tutorialAt = null; tutorialMs = 0; guide.hide();
     finishX = course.finishX; session = null; result = null; pausedAt = null; resumeAt = null; finishedAt = null;
     season = getSeason(subjectId); nextSeason = season; seasonBlend = 0;
     role('bubble').hidden = true;
@@ -220,13 +225,14 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     if (C.pinch.strictQuality && span >= 1000 && fps < C.pinch.minCaptureFps) measurement = { valid: false, eligible: false, ratio: null, reason: 'slow' };
     pinchState = controller.update(measurement, frame.t);
     if (pinchState.ready) lastReadyWall = lastFrameWall;
-    if (session && ['playing', 'paused', 'finishing'].includes(phase)) session.addSample(frame, measurement, pinchState);
+    if (session && ['playing', 'tutorial', 'paused', 'finishing'].includes(phase)) session.addSample(frame, measurement, pinchState);
 
     const ev = pinchState.event;
     if (phase === 'setup' || phase === 'armed') updateSetup();
     if (ev?.type === 'grab') {
       if (phase === 'armed') beginCountdown();
       else if (phase === 'playing') tryJump();
+      else if (phase === 'tutorial') endTutorial();
     }
     if (phase === 'paused') {
       setText(role('pause-text'), measurement.valid && measurement.eligible ? 'Separa pulgar e índice para seguir.' : framing.hint().text);
@@ -241,6 +247,28 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     const target = obstacles.find(o => !o.passed && o.x + o.w > foxWorld + FOX_BOX.left && o.x - foxWorld < 170);
     session?.jump({ obstacleId: target?.id ?? null, gameMs, offsetPx: target ? foxWorld - target.x : null, idealPx: target ? idealOffset : null });
     audio.jump();
+  }
+
+  // Ronda introductoria: el mundo se para delante de cada uno de los primeros troncos y la
+  // guía enseña la pinza; la pinza del paciente es el salto. Tras el último, sigue solo.
+  const TUTORIAL_STEPS = [
+    { kicker: 'Cómo se juega', title: 'Junta pulgar e índice para saltar', hint: 'Hazlo tú ahora: el zorro te espera.', done: '¡Eso es!' },
+    { kicker: 'Una vez más', title: 'Otra vez: junta pulgar e índice', hint: 'Un salto más y sigues tú solo.', done: '¡Perfecto! Ahora tú solo' },
+  ];
+  function beginTutorial() {
+    tutorialShown = true; phase = 'tutorial'; tutorialAt = performance.now();
+    role('bubble').hidden = true;
+    const total = C.tutorialJumps, i = Math.min(tutorialJumps, TUTORIAL_STEPS.length - 1), step = TUTORIAL_STEPS[i];
+    guide.show({ gesture: 'pinch', kicker: step.kicker, title: step.title, hint: step.hint, align: 'right', step: total > 1 ? { index: tutorialJumps, total } : null });
+  }
+  // La pinza real quita la guía y es el salto que supera el tronco.
+  function endTutorial() {
+    tutorialMs += performance.now() - tutorialAt;
+    const step = TUTORIAL_STEPS[Math.min(tutorialJumps, TUTORIAL_STEPS.length - 1)];
+    tutorialJumps++;
+    phase = 'playing';
+    tryJump();
+    void guide.success({ title: step.done });
   }
 
   function pause(reason) {
@@ -271,11 +299,6 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     }
   }
 
-  function bubble(text) {
-    const el = role('bubble');
-    setText(el, text); el.hidden = false;
-  }
-
   function stepPlay(dt) {
     gameMs += dt;
     const speed = C.speed * (fox.stumbleMs > 0 ? 0.55 : 1);
@@ -300,13 +323,9 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
         burst(b.x - scroll, groundY - b.y, 8, ['#d8263a', '#ffd84a', '#ffffff']);
       }
     }
-    // Tutorial: el aviso aparece con el primer obstáculo y se va al superarlo.
+    // Ronda introductoria: justo antes del primer tronco (dentro de la ventana de salto).
     const next = obstacles.find(o => !o.passed);
-    if (next && next.x - foxWorld < 150 && !tutorialShown) {
-      tutorialShown = true; bubbleFor = next.id;
-      bubble('¡Junta pulgar e índice para saltar!');
-    }
-    if (bubbleFor !== null && obstacles[bubbleFor].passed) { bubbleFor = null; role('bubble').hidden = true; }
+    if (next && tutorialJumps < C.tutorialJumps && next.id < C.tutorialJumps && fox.onGround && foxWorld - next.x >= C.tutorialOffsetPx) { beginTutorial(); return; }
     if (foxWorld >= finishX - 30) { phase = 'finishing'; role('bubble').hidden = true; }
   }
 
@@ -330,6 +349,7 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     if (!session || result) return;
     result = session.finish(lastFrame?.t ?? session.start, gameMs, completed);
     result.seasonName = SEASONS[season].name;
+    result.tutorial = tutorialShown ? { gesture: 'pinch', jumps: tutorialJumps, obstacleIds: Array.from({ length: tutorialJumps }, (_, i) => i), shownMs: Math.round(tutorialMs) } : null;
     if (completed && !onComplete) nextSeason = advanceSeason(subjectId);
     result.nextSeason = nextSeason;
     storeSession(result);
@@ -459,13 +479,13 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
   // Secuencia: al terminar el zorro (o al saltarlo) se pasa al siguiente juego.
   $('[data-action="next"]')?.addEventListener('click', () => { const r = result; cleanup(); onNext({ result: r }); });
   $('[data-action="skip"]')?.addEventListener('click', () => {
-    if (['playing', 'paused', 'finishing'].includes(phase)) finish(false);
+    if (['playing', 'tutorial', 'paused', 'finishing'].includes(phase)) finish(false);
     clearInterval(countdownTimer);
     const r = result; cleanup();
     if (onComplete) onComplete({ result: r, skipped: true }); else onNext({ result: r, skipped: true });
   });
   $('[data-action="exit"]').addEventListener('click', () => {
-    if (['playing', 'paused', 'finishing'].includes(phase)) finish(false);
+    if (['playing', 'tutorial', 'paused', 'finishing'].includes(phase)) finish(false);
     if (onExit) { cleanup(); onExit(); return; }
     exitToTitle();
   });
@@ -488,7 +508,7 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     disposed = true;
     clearInterval(countdownTimer);
     if (raf !== null) cancelAnimationFrame(raf);
-    camera.stop(); audio.close();
+    camera.stop(); audio.close(); guide.dispose();
     document.removeEventListener('keydown', keydown);
     window.removeEventListener('resize', fit);
   }

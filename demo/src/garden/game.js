@@ -3,6 +3,8 @@
 // visible, sin tiempo límite ni fallo. Cámara oculta compartida con los otros juegos.
 // Al empezar se elige la mano: con la derecha la escena va en espejo (el zorro riega
 // hacia la izquierda), porque verter con la derecha es girar hacia dentro.
+// Ronda introductoria en dos pasos: una mano animada enseña el agarre (mientras se toma
+// el «recto») y después el giro de verter; el motor espera hasta el primer giro real.
 
 import '../runner/runner.css';
 import { GARDEN_CONFIG as C } from './config.js';
@@ -18,6 +20,7 @@ import { createAudio } from '../runner/audio.js';
 import { SEASONS } from '../pixel/seasons.js';
 import { FramingTracker } from '../pack/framing.js';
 import { HandTracker } from '../vision/hands.js';
+import { createGestureGuide } from '../tutorial/gestureGuide.js';
 
 const SESSIONS_KEY = 'fixedgap_garden_sessions', HAND_KEY = 'fixedgap_garden_hand';
 const savedHand = () => { try { return localStorage.getItem(HAND_KEY) === 'Left' ? 'Left' : 'Right'; } catch { return 'Right'; } };
@@ -74,6 +77,7 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
 
   let engine = new GardenEngine(C, { pourSign: hand === 'Right' ? -1 : 1 });
   const audio = createAudio();
+  const guide = createGestureGuide(root);
   const framing = new FramingTracker();
   const tracker = new HandTracker();
   const smoother = new HandSmoother({ emaAlpha: 0.6, maxLostFrames: 8 });
@@ -81,6 +85,9 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
   let phase = 'loading', disposed = false, raf = null, last = performance.now(), startedAt = null, startWall = null;
   let lastFrame = null, lastTrackedWall = null, trackedSince = null, pausedAt = null, pauses = 0, pausedMs = 0;
   let tracked = 0, attempted = 0, raw = null, result = null, lastCamT = 0;
+  // Ronda introductoria: paso actual ('grip' → 'tilt' → null) y tiempo total con la guía.
+  let tutorialStep = null, tutorialAt = null, tutorialMs = 0;
+  const wrap = d => { while (d > 180) d -= 360; while (d < -180) d += 360; return d; };
 
   // Cualquier mano visible (la de más confianza): sirve para derecha e izquierda.
   const camera = cameraFactory({ hand: 'Right', onFrame: receive,
@@ -106,11 +113,35 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
     lastTrackedWall = now; trackedSince ??= now; tracked++;
     if (phase !== 'playing') return;
     startedAt ??= frame.t; lastCamT = frame.t;
+    // Paso 2 de la guía: el motor espera (sin adaptar el umbral) hasta el primer giro real.
+    // La regadera sí copia la inclinación para que se vea el efecto de probar.
+    if (tutorialStep === 'tilt') {
+      engine.rel = wrap(angle - engine.neutral); engine.pour = engine.pourSign * engine.rel;
+      engine.tilt = Math.max(0, engine.pour); engine.flow = 0;
+      if (engine.pour < engine.pourStart) return;
+      endTutorial(frame.t);
+    }
     for (const ev of engine.update({ t: frame.t, angle, velocity: filter.velocity, wrist: { x: picked.landmarks[0].x, y: picked.landmarks[0].y } })) {
       if (ev.type === 'bloom') audio.berry();
-      if (ev.type === 'ready') audio.go();
+      if (ev.type === 'ready') { audio.go(); if (tutorialStep === 'grip') showTutorial('tilt'); }
       if (ev.type === 'done') finish(true);
     }
+  }
+
+  function showTutorial(step) {
+    tutorialStep = step; tutorialAt ??= performance.now();
+    role('bubble').hidden = true;
+    // El zorro está en el lado contrario a donde riega: la tarjeta se pone donde no tapa.
+    const align = scene.mirror ? 'left' : 'right';
+    guide.show(step === 'grip'
+      ? { gesture: 'grip', title: 'Cierra la mano como si cogieras una regadera', hint: 'Pulgar hacia arriba. Mantenla quieta un momento.', step: { index: 0, total: 2 }, align }
+      : { gesture: 'tilt', title: 'Inclina la mano para regar', hint: 'Gira la muñeca hacia dentro, como si vertieras agua.', mirror: hand === 'Left', step: { index: 1, total: 2 }, align });
+  }
+  function endTutorial(t) {
+    tutorialStep = null; tutorialMs = performance.now() - tutorialAt;
+    // El tiempo con la guía no cuenta para la flor ni para adaptar el umbral.
+    engine.phaseAt = t; if (engine.flower) engine.flower.readyAt = t;
+    void guide.success();
   }
 
   function instruction() {
@@ -128,6 +159,7 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
     result = summarize(engine, { subjectId, hand, season, completed,
       durationMs: startedAt !== null ? Math.round(lastCamT - startedAt) : null,
       quality: { trackedCoverage: attempted ? Math.round(tracked / attempted * 1000) / 1000 : 0, pauses, pausedMs: Math.round(pausedMs) } });
+    result.tutorial = tutorialAt !== null ? { steps: ['grip', 'tilt'], shownMs: Math.round(tutorialMs) } : null;
     storeSession(result, SESSIONS_KEY);
     camera.stop();
     if (completed) audio.finish();
@@ -165,11 +197,12 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     if (phase === 'playing' && (lastTrackedWall === null ? now - startWall > 3000 : now - lastTrackedWall > C.pauseAfterLossMs)) {
-      phase = 'paused'; pausedAt = now; pauses++; role('pause').hidden = false; role('bubble').hidden = true;
+      phase = 'paused'; pausedAt = now; pauses++; role('pause').hidden = false; role('bubble').hidden = true; guide.hide();
     } else if (phase === 'paused' && trackedSince !== null && now - trackedSince > 400) {
       pausedMs += now - pausedAt; phase = 'playing'; role('pause').hidden = true;
+      if (tutorialStep) showTutorial(tutorialStep);
     }
-    if (phase === 'playing') { const text = instruction(); setText(role('bubble'), text); role('bubble').hidden = !text; }
+    if (phase === 'playing' && !tutorialStep) { const text = instruction(); setText(role('bubble'), text); role('bubble').hidden = !text; }
     const handStatus = lastTrackedWall !== null && now - lastTrackedWall < 400 ? 'ready' : 'missing';
     scene.update(engine, phase === 'paused' ? 0 : dt, { hand: handStatus, now: lastCamT });
     scene.render();
@@ -204,6 +237,7 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
   const maybeStart = () => {
     if (disposed || !handChosen || !cameraReady || phase !== 'loading') return;
     role('loading').hidden = true; phase = 'playing'; startWall = performance.now();
+    showTutorial('grip');
   };
   const markHand = () => root.querySelectorAll('[data-hand]').forEach(b => { b.className = b.dataset.hand === hand ? 'runner-primary' : 'runner-secondary'; });
   markHand();
@@ -226,14 +260,14 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
     }
   })();
 
-  root.gardenState = () => ({ phase, hand, enginePhase: engine.phase, rel: engine.rel, tilt: engine.tilt, flow: engine.flow,
+  root.gardenState = () => ({ phase, hand, tutorialStep, enginePhase: engine.phase, rel: engine.rel, tilt: engine.tilt, flow: engine.flow,
     index: engine.index, pourStart: engine.pourStart, pourSign: engine.pourSign, mirror: scene.mirror, result });
 
   function cleanup() {
     if (disposed) return;
     disposed = true;
     if (raf !== null) cancelAnimationFrame(raf);
-    camera.stop(); scene.dispose(); audio.close();
+    camera.stop(); scene.dispose(); audio.close(); guide.dispose();
     window.removeEventListener('resize', onResize);
     document.removeEventListener('keydown', keydown);
   }

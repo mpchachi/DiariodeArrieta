@@ -1,0 +1,96 @@
+/* Guía de gesto: capa clínica, neutra y limpia sobre el juego pixel.
+   Tipografía Inter (con system-ui de reserva), grises fríos, una sola fuente de énfasis. */
+.fg-guide {
+  --fg-ink: #0f172a;
+  --fg-muted: #64748b;
+  --fg-line: rgba(15, 23, 42, 0.08);
+  --fg-ok: #15803d;
+  position: absolute; inset: 0; z-index: 5;
+  display: grid; place-items: center;
+  padding: 24px;
+}
+/* La tarjeta se aparta del lado donde está la acción (el zorro, el globo). */
+.fg-guide--right { justify-items: end; padding-right: 7vw; }
+.fg-guide--left { justify-items: start; padding-left: 7vw; }
+@media (max-width: 900px) { .fg-guide--right, .fg-guide--left { justify-items: center; padding-left: 24px; padding-right: 24px; } }
+.fg-guide {
+  background: rgba(15, 23, 42, 0.26);
+  -webkit-backdrop-filter: blur(2.5px); backdrop-filter: blur(2.5px);
+  pointer-events: none; /* los chips de abajo (Salir, Saltar) siguen pulsables */
+  opacity: 0; transition: opacity 260ms ease;
+  font-family: 'Inter', -apple-system, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.fg-guide.is-in { opacity: 1; }
+.fg-guide.is-out { opacity: 0; transition-duration: 220ms; }
+.fg-guide[hidden] { display: none !important; }
+
+.fg-guide__card {
+  width: min(400px, 100%);
+  padding: 26px 28px 28px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 28px;
+  box-shadow:
+    0 0 0 1px var(--fg-line),
+    0 2px 6px rgba(15, 23, 42, 0.05),
+    0 32px 80px -24px rgba(15, 23, 42, 0.45);
+  text-align: center; color: var(--fg-ink);
+  transform: translateY(14px) scale(0.97);
+  transition: transform 420ms cubic-bezier(0.2, 0.9, 0.25, 1.1);
+  pointer-events: auto;
+}
+.fg-guide.is-in .fg-guide__card { transform: none; }
+.fg-guide.is-out .fg-guide__card { transform: translateY(6px) scale(0.985); transition-duration: 220ms; }
+
+.fg-guide__kicker {
+  margin: 0 0 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.fg-guide__stage {
+  position: relative; width: 232px; height: 232px; margin: 0 auto 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 42%, #ffffff 0%, #f3f5f9 58%, #e9edf3 100%);
+  box-shadow: inset 0 0 0 1px var(--fg-line), inset 0 -18px 30px -24px rgba(15, 23, 42, 0.22);
+}
+.fg-guide__stage.is-swap { animation: fg-swap 420ms cubic-bezier(0.2, 0.9, 0.25, 1.2); }
+@keyframes fg-swap { 30% { transform: scale(0.94); } }
+.fg-guide__hand {
+  position: absolute; inset: 0; width: 232px; height: 232px; display: block;
+  image-rendering: auto;
+  filter: drop-shadow(0 14px 18px rgba(15, 23, 42, 0.18));
+}
+.fg-guide__check {
+  position: absolute; inset: 0; display: grid; place-items: center; border-radius: 50%;
+  color: #fff; background: rgba(21, 128, 61, 0);
+  opacity: 0; transform: scale(0.8);
+  transition: opacity 180ms ease, transform 320ms cubic-bezier(0.2, 0.9, 0.25, 1.3), background-color 220ms ease;
+}
+.fg-guide__check svg { width: 88px; height: 88px; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.18)); }
+.fg-guide__check svg path { stroke-dasharray: 40; stroke-dashoffset: 40; }
+.fg-guide.is-done .fg-guide__check { opacity: 1; transform: none; background: #15803d; }
+.fg-guide.is-done .fg-guide__check svg path { animation: fg-tick 380ms 120ms cubic-bezier(0.3, 0.8, 0.3, 1) forwards; }
+@keyframes fg-tick { to { stroke-dashoffset: 0; } }
+.fg-guide.is-done .fg-guide__stage { box-shadow: inset 0 0 0 1px var(--fg-line), 0 0 0 8px rgba(21, 128, 61, 0.14); transition: box-shadow 260ms ease; }
+.fg-guide.is-done .fg-guide__title { color: var(--fg-ok); }
+
+.fg-guide__title {
+  margin: 0; font-size: 23px; line-height: 1.22; font-weight: 700; letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+.fg-guide__hint { margin: 8px 0 0; font-size: 15px; line-height: 1.45; color: var(--fg-muted); min-height: 1.45em; }
+.fg-guide__dots { display: flex; justify-content: center; gap: 7px; margin-top: 16px; }
+.fg-guide__dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(15, 23, 42, 0.14); transition: background 200ms, width 200ms; }
+.fg-guide__dots i.is-current { width: 22px; border-radius: 4px; background: var(--fg-ink); }
+.fg-guide__dots i.is-done { background: var(--fg-ok); }
+
+@media (max-width: 480px), (max-height: 560px) {
+  .fg-guide__card { padding: 18px 20px 20px; border-radius: 22px; }
+  .fg-guide__stage, .fg-guide__hand { width: 176px; height: 176px; }
+  .fg-guide__title { font-size: 19px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fg-guide, .fg-guide__card, .fg-guide__check { transition-duration: 1ms; }
+  .fg-guide__stage.is-swap { animation: none; }
+}

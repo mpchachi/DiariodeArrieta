@@ -159,6 +159,17 @@ Hecho: Runner completo en `demo/src/runner/`, conectado a «Jugar». Pasan tests
   - Pantalla «Coloca la mano» al inicio del viaje: única vista de cámara, con zona guía y caja de la mano. Avanza sola tras 1,5 s bien colocada y tiene «Continuar sin comprobar».
   - En pausa, los 3 juegos explican por qué se perdió la mano (p. ej. «Aleja un poco la mano»), según la última caja vista.
 
+2026-10-06, ronda introductoria en los 3 juegos (`demo/src/tutorial/`):
+- Guía de gesto (`gestureGuide.js`): tarjeta blanca estilo clínico (Inter, grises fríos, fondo del juego atenuado) con una mano gris 3D animada en bucle y una frase. Sin botones: se retira sola con una marca verde cuando el paciente hace el gesto. Los chips de abajo (Salir, Saltar) siguen pulsables.
+- Mano (`handModel.js` + `handGL.js`): esqueleto 3D de 21 puntos (como MediaPipe) posado por ángulos de articulación y renderizado en WebGL como una superficie continua (campo de distancia con uniones suaves: palma, dedos que se estrechan, antebrazo que se desvanece), trazada por rayos en el fragment shader en el espacio LOCAL de la mano (palma plana y ancha, nudillos y tendones en el dorso, uñas, antebrazo ovalado) con sombreado de arcilla mate gris, sombra proyectada, oclusión ambiental y contorno fino. Las uñas se posicionan en JS (`nailAnchors`) y `gestureFrame` devuelve `local` + `basis`. Las poses tienen 4.º valor opcional por dedo (separación) para que el puño converja; `pour` es el puño con el pulgar abierto para el gesto de verter. `handRender.js` (cápsulas 2D) queda como respaldo si no hay WebGL. La primera versión de cápsulas la rechazó Luis («está muy mal hecha»): se veía a tubos sueltos. Gestos: `pinch`, `fist`, `grip`, `tilt` (el giro va hacia el lado de verter; `mirror` para la mano izquierda). Vista previa: `/tutorial.html` (`?t=ms` congela, `?done=1` marca, `?hand=Left`).
+- Zorro: ante el primer tronco el mundo se para (fase `tutorial`, `tutorialOffsetPx: -30`, dentro de la ventana de salto) y la primera pinza real es el salto. Globo: la guía sustituye a la cuenta atrás; el primer puño arranca el vuelo. Huerto: dos pasos, agarre (mientras se toma el recto) y giro; el motor espera sin adaptar el umbral hasta el primer giro real.
+- Los resultados llevan `tutorial` (gesto/pasos y `shownMs`). Pruebas: `src/tutorial/tutorial.test.js` y los tests de UI comprueban la ronda. Capturas: `node scripts/shot-tutorial.mjs` con `SHOTS=dir`.
+
+2026-10-07, segunda pasada de la ronda introductoria (Luis: «demasiado poco guiado» y la mano con bugs):
+- Zorro: `tutorialJumps: 2` (`runner/config.js`). El mundo se para ante los dos primeros troncos; tarjetas «Junta pulgar e índice para saltar» → «¡Eso es!» y «Otra vez: junta pulgar e índice» → «¡Perfecto! Ahora tú solo», con puntos de progreso. `result.tutorial` lleva `jumps` y `obstacleIds`. El globo y el huerto siguen con un paso (huerto: dos, agarre y giro).
+- Mano: dibujo limpio en vez de anatomía (fuera nudillos, tendones y bultos; dedos lisos que se afinan; palma plana muy fundida). Bug corregido en `thumbFrame`: el plano de flexión del pulgar degeneraba al apuntar a la cámara (`cross(z, dir)` ≈ 0) y salía como una salchicha hacia fuera; ahora se dobla siempre hacia la oposición. Poses afinadas numéricamente (pinza tipo «OK» con yemas en contacto, pulgar del puño sobre las falanges medias). Vistas 3/4 legibles; verter usa la misma vista lateral del agarre (puño con pulgar arriba) girando. Con la mano izquierda la cámara también se refleja.
+- `/tutorial.html?gesture=fist&views=yaw,pitch,roll;...` compara cámaras; `QUERY=` en `scripts/shot-tutorial.mjs`.
+
 2026-10-07, visión por computador blindada.
 - `RunnerCamera` (`runner/camera.js`) reescrita, sin heredar de `PinchCamera`; el Pastillero v2 no se toca.
   - Reloj monótono: `t` = `performance.now()` por fotograma nuevo; antes se usaba el tiempo del vídeo, que vuelve a 0 al reconectar y bloqueaba la pinza.
@@ -225,6 +236,7 @@ Hecho: Runner completo en `demo/src/runner/`, conectado a «Jugar». Pasan tests
 - **Para publicar la plataforma: `git push` a `DiariodeArrieta` main** (se despliega sola, unos 32 MB). NO tocar el repo de la web. `npm run build:web -- <web>` es el método antiguo.
 - Comprobado en producción: las 24 páginas de la web, login, dashboard, «Volver al Operador» y la detección de la mano a través del rewrite.
 - CLI: `npx vercel@61.1.0` (sesión iniciada como mpchachi).
+
 
 Pendiente / bugs vistos en el portátil de Mateo (Chrome, cámara real):
 1. **No detecta la mano** (2026-10-03, pendiente de confirmar con cámara real). Cambios hechos:

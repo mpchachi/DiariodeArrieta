@@ -52,8 +52,16 @@ try {
   await page.locator('[data-hand=Right]').click();
   const st0 = await state();
   assert.equal(st0.mirror, true); assert.equal(st0.pourSign, -1);
-  await runUntil(s => s.enginePhase === 'water', 8000, 'recto automático');
+  // Ronda introductoria: agarre mientras se toma el recto, después el giro.
   await page.clock.runFor(300);
+  assert.equal((await state()).tutorialStep, 'grip');
+  if (shots) await page.screenshot({ path: `${shots}/garden-tutorial-grip.png` });
+  await runUntil(s => s.enginePhase === 'water', 8000, 'recto automático');
+  assert.equal((await state()).tutorialStep, 'tilt');
+  assert.equal(await page.locator('.fg-guide .fg-guide__title').textContent(), 'Inclina la mano para regar');
+  await page.clock.runFor(300);
+  if (shots) await page.screenshot({ path: `${shots}/garden-tutorial-tilt.png` });
+  await runUntil(s => s.tutorialStep === null, 5000, 'primer giro');
   if (shots) await page.screenshot({ path: `${shots}/garden-start.png` });
   await runUntil(s => s.flow > 0.5, 5000, 'regar');
   await page.clock.runFor(900);
@@ -82,6 +90,7 @@ try {
   assert.ok(r.summary.maxTiltDeg > 45, String(r.summary.maxTiltDeg));
   assert.ok(r.durationMs < 75000, `dura ${r.durationMs} ms`);
   assert.equal(r.quality.pauses, 1);
+  assert.deepEqual(r.tutorial?.steps, ['grip', 'tilt']);
   if (shots) await page.screenshot({ path: `${shots}/garden-end.png` });
   await page.locator('[data-action=done]').click();
   assert.equal(await page.evaluate(() => window.doneResult?.game), 'garden');

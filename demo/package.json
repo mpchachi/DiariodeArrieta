@@ -10,7 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "assets:pinch": "node scripts/prepare-pinch-assets.mjs",
-    "test": "node --test src/games/pastillero/*.test.js src/runner/*.test.js src/flappy/*.test.js src/fishing/*.test.js src/garden/*.test.js src/vision/*.test.js src/pack/*.test.js",
+    "test": "node --test src/games/pastillero/*.test.js src/runner/*.test.js src/flappy/*.test.js src/fishing/*.test.js src/garden/*.test.js src/vision/*.test.js src/pack/*.test.js src/tutorial/*.test.js",
     "test:ui": "node scripts/test-pinch-ui.mjs",
     "test:runner-ui": "node scripts/test-runner-ui.mjs",
     "test:flappy-ui": "node scripts/test-flappy-ui.mjs",

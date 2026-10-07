@@ -1,6 +1,8 @@
 // El zorro en globo (motor del Flappy de FlappyVaina). Cierra el puño para encender
 // el quemador y subir; ábrelo para bajar. Mismo detector de puño 3D y métricas; cámara
 // oculta compartida con el Runner. Versión fácil: sin game over y recorrido fijo.
+// Ronda introductoria: antes de volar, una mano animada enseña a cerrar el puño; el
+// primer puño real quita la guía y arranca el vuelo (el globo sube con él).
 
 import '../runner/runner.css';
 import { FLAPPY_CONFIG as C } from './config.js';
@@ -15,6 +17,7 @@ import { storeSession, getSeason } from '../runner/progress.js';
 import { createAudio } from '../runner/audio.js';
 import { SEASONS } from '../pixel/seasons.js';
 import { FramingTracker } from '../pack/framing.js';
+import { createGestureGuide } from '../tutorial/gestureGuide.js';
 
 const SESSIONS_KEY = 'fixedgap_flappy_sessions';
 
@@ -31,7 +34,6 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
         ${onNext || onComplete ? '<button type="button" class="runner-chip runner-chip--quiet" data-action="skip">Saltar →</button>' : ''}
       </div>
       <div class="runner-bubble" data-role="bubble" hidden></div>
-      <div class="runner-countdown" data-role="countdown" hidden></div>
       <div class="runner-panel runner-panel--small" data-role="loading">
         <p class="runner-kicker">FixedGap</p>
         <h1>El zorro en globo</h1>
@@ -68,6 +70,7 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
 
   const engine = new FlappyEngine(C);
   const audio = createAudio();
+  const guide = createGestureGuide(root);
   const framing = new FramingTracker();
   // Siempre la mano derecha del paciente (ver RUNNER_CONFIG.detectedHandLabel).
   const hand = RUNNER_CONFIG.detectedHandLabel;
@@ -75,7 +78,7 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
   const smoother = new HandSmoother(C.fist), worldSmoother = new HandSmoother(C.fist, 1);
   let phase = 'loading', disposed = false, raf = null, last = performance.now(), playMs = 0;
   let strength = 0, fist = null, lastTrackedWall = null, trackedSince = null, lastFrame = null;
-  let session = null, result = null, countdownTimer = null, pausedAt = null, bubbleUntil = 0;
+  let session = null, result = null, pausedAt = null, bubbleUntil = 0, tutorialAt = null, tutorialMs = 0;
 
   const camera = cameraFactory({ hand, onFrame: receive,
     onStatus: m => { if (disposed) return; if (phase === 'loading') setText(role('status'), m); else if (phase === 'paused') setText(role('pause-hint'), m); },
@@ -104,31 +107,26 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
 
   function bubble(text, ms) { setText(role('bubble'), text); role('bubble').hidden = false; bubbleUntil = performance.now() + ms; }
 
-  function beginCountdown() {
-    phase = 'countdown';
+  // Ronda introductoria: la guía enseña el puño; el primer puño real arranca el vuelo.
+  function beginTutorial() {
+    phase = 'tutorial'; tutorialAt = performance.now();
     role('loading').hidden = true;
-    let n = C.countdownSeconds;
-    const el = role('countdown');
-    el.hidden = false; setText(el, String(n)); audio.count();
-    bubble('Prepárate para cerrar el puño', C.countdownSeconds * 1000);
-    countdownTimer = setInterval(() => {
-      if (disposed) return;
-      n--;
-      if (n > 0) { setText(el, String(n)); audio.count(); return; }
-      if (n === 0) { setText(el, '¡A volar!'); audio.go(); return; }
-      clearInterval(countdownTimer); countdownTimer = null;
-      el.hidden = true;
-      engine.start();
-      session = new FlappySession({ hand: RUNNER_CONFIG.patientHand, subjectId, startedAt: lastFrame?.t ?? 0, C });
-      phase = 'playing';
-      bubble('¡Cierra el puño para encender el fuego y subir!', 6000);
-    }, 1000);
+    guide.show({ gesture: 'fist', title: 'Cierra el puño para subir', hint: 'Al abrir la mano, el globo baja.', align: 'right' });
+  }
+  function endTutorial() {
+    tutorialMs = performance.now() - tutorialAt;
+    void guide.success();
+    engine.start();
+    session = new FlappySession({ hand: RUNNER_CONFIG.patientHand, subjectId, startedAt: lastFrame?.t ?? 0, C });
+    phase = 'playing';
+    audio.go();
   }
 
   function finish(completed) {
     if (!session || result) return;
     result = session.finish(lastFrame?.t ?? session.start, completed, engine.state);
     result.season = season;
+    result.tutorial = tutorialAt !== null ? { gesture: 'fist', shownMs: Math.round(tutorialMs) } : null;
     storeSession(result, SESSIONS_KEY);
     camera.stop();
     if (completed) audio.finish();
@@ -176,10 +174,12 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
       }
     } else if (phase === 'paused' && trackedSince !== null && now - trackedSince > 500) {
       session.resume(now - pausedAt); phase = 'playing'; role('pause').hidden = true;
+    } else if (phase === 'tutorial' && trackedSince !== null && strength >= C.fist.activationOn) {
+      endTutorial();
     }
     if (!role('bubble').hidden && now > bubbleUntil) role('bubble').hidden = true;
     const handStatus = lastTrackedWall !== null && now - lastTrackedWall < 400 ? (strength > 0.5 ? 'fist' : 'open') : 'missing';
-    scene.setInput({ strength: phase === 'playing' || phase === 'countdown' ? strength : 0, hand: handStatus });
+    scene.setInput({ strength: phase === 'playing' || phase === 'tutorial' ? strength : 0, hand: handStatus });
     scene.update(engine.state, phase === 'paused' ? 0 : dt);
     scene.render();
     const debug = $('.runner-debug');
@@ -213,7 +213,7 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
   raf = requestAnimationFrame(loop);
   (async () => {
     const ok = await camera.start($('.runner-camera'));
-    if (!disposed && ok && phase === 'loading') beginCountdown();
+    if (!disposed && ok && phase === 'loading') beginTutorial();
   })();
 
   root.flappyState = () => ({ phase, strength, fist, engine: engine.state, result });
@@ -221,9 +221,8 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
   function cleanup() {
     if (disposed) return;
     disposed = true;
-    clearInterval(countdownTimer);
     if (raf !== null) cancelAnimationFrame(raf);
-    camera.stop(); scene.dispose(); audio.close();
+    camera.stop(); scene.dispose(); audio.close(); guide.dispose();
     window.removeEventListener('resize', onResize);
     document.removeEventListener('keydown', keydown);
   }

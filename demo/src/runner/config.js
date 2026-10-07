@@ -91,6 +91,14 @@ export const RUNNER_CONFIG = Object.freeze({
   cropTop: 30,
   finishOffset: 260,
 
+  // --- Ronda introductoria ---
+  // En los primeros `tutorialJumps` troncos el juego se detiene y una mano animada enseña
+  // la pinza; sigue cuando el paciente la hace (la pinza ya es el salto que supera el
+  // tronco). Se para a esta distancia del tronco (dentro de la ventana de despegue, de
+  // −45 a −10 px). Tras el último salto guiado, el juego sigue solo.
+  tutorialJumps: 2,
+  tutorialOffsetPx: -30,
+
   // --- Sesión ---
   countdownSeconds: 3,
   pauseAfterLossMs: 800,

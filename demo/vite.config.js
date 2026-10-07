@@ -26,6 +26,7 @@ export default defineConfig({
         flappy: path.resolve(import.meta.dirname, 'flappy.html'),
         fishing: path.resolve(import.meta.dirname, 'fishing.html'),
         garden: path.resolve(import.meta.dirname, 'garden.html'),
+        tutorial: path.resolve(import.meta.dirname, 'tutorial.html'),
       },
     },
   },

@@ -26,7 +26,7 @@ try {
         interval = setInterval(() => {
           const o = window.testFrame, B = window.bot;
           const st = document.querySelector('.runner-app').runnerState();
-          if (B.auto && st.phase === 'playing') {
+          if (B.auto && (st.phase === 'playing' || st.phase === 'tutorial')) {
             const now = performance.now();
             if (B.holdUntil > now) o.ratio = .1;
             else {
@@ -58,6 +58,25 @@ try {
   await set({ ratio: .1 }); await page.clock.runFor(200); await set({ ratio: .8 });
   await page.clock.runFor(2700);
   assert.equal((await state()).phase, 'playing');
+  // Ronda introductoria: ante el primer tronco el mundo se para y la guía enseña la pinza.
+  for (let i = 0; i < 40 && (await state()).phase !== 'tutorial'; i++) await page.clock.runFor(200);
+  const tut = await state();
+  assert.equal(tut.phase, 'tutorial');
+  assert.ok(tut.scroll + 64 - tut.obstacles[0].x >= -45 && tut.scroll + 64 - tut.obstacles[0].x <= -10, 'se para dentro de la ventana de salto');
+  assert.equal(await page.locator('.fg-guide .fg-guide__title').textContent(), 'Junta pulgar e índice para saltar');
+  if (shots) await page.screenshot({ path: `${shots}/runner-tutorial.png` });
+  await page.clock.runFor(2000);
+  assert.equal((await state()).phase, 'tutorial', 'sin pinza no sigue');
+  assert.ok(Math.abs((await state()).scroll - tut.scroll) < 1, 'el mundo está parado');
+  // Primera pinza: salto guiado 1. Ante el segundo tronco vuelve a parar con «otra vez».
+  await set({ ratio: .1 }); await page.clock.runFor(300); await set({ ratio: .8 });
+  for (let i = 0; i < 60 && (await state()).phase !== 'tutorial'; i++) await page.clock.runFor(200);
+  const tut2 = await state();
+  assert.equal(tut2.phase, 'tutorial', 'segundo salto guiado');
+  assert.ok(tut2.scroll > tut.scroll + 50, 'ha avanzado hasta el segundo tronco');
+  assert.equal(await page.locator('.fg-guide .fg-guide__title').textContent(), 'Otra vez: junta pulgar e índice');
+  assert.equal(await page.locator('.fg-guide .fg-guide__dots i.is-done').count(), 1);
+  if (shots) await page.screenshot({ path: `${shots}/runner-tutorial2.png` });
   await page.evaluate(() => { window.bot.auto = true; });
 
   await page.clock.runFor(15000);
@@ -87,6 +106,7 @@ try {
   assert.equal(r.summary.obstacles.total, 5);
   assert.equal(r.summary.obstacles.cleared, 5, JSON.stringify(r.obstacles.filter(o => !o.cleared)));
   assert.equal(r.quality.pauses, 1);
+  assert.equal(r.tutorial?.gesture, 'pinch'); assert.equal(r.tutorial.jumps, 2);
   assert.ok(r.summary.pinch.cycles >= 4, `ciclos ${r.summary.pinch.cycles}`);
   assert.equal(end.nextSeason, 1);
   assert.equal(await page.locator('[data-panel=end]').isVisible(), true);

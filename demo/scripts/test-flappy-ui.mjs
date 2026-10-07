@@ -43,10 +43,18 @@ try {
   const state = () => page.evaluate(() => document.querySelector('.flappy-app').flappyState());
   await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/flappy.html`);
   await page.clock.runFor(2500);
-  assert.equal((await state()).phase, 'countdown');
-  if (shots) await page.screenshot({ path: `${shots}/flappy-countdown.png` });
-  await page.clock.runFor(5000);
+  // Ronda introductoria: la guía enseña el puño y el vuelo no arranca hasta el primer puño.
+  assert.equal((await state()).phase, 'tutorial');
+  assert.equal(await page.locator('.fg-guide .fg-guide__title').textContent(), 'Cierra el puño para subir');
+  if (shots) await page.screenshot({ path: `${shots}/flappy-tutorial.png` });
+  await page.clock.runFor(3000);
+  assert.equal((await state()).phase, 'tutorial', 'sin puño no arranca');
+  await page.evaluate(() => { window.pilot.closed = true; });
+  await page.clock.runFor(600);
   assert.equal((await state()).phase, 'playing');
+  assert.match(await page.locator('.fg-guide .fg-guide__title').textContent(), /Eso es/);
+  await page.clock.runFor(1500);
+  assert.equal(await page.locator('.fg-guide').isVisible(), false, 'la guía se retira');
   await page.evaluate(() => { window.pilot.auto = true; });
   await page.clock.runFor(12000);
   if (shots) await page.screenshot({ path: `${shots}/flappy-play.png` });
