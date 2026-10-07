@@ -40,3 +40,5 @@ miapikey.txt
 # Build de la plataforma para Vercel
 dist-vercel/
 .vercel/
+.vercel
+.env*

@@ -215,6 +215,17 @@ Hecho: Runner completo en `demo/src/runner/`, conectado a «Jugar». Pasan tests
 - 8 pacientes de demostración (`PT-xxxx (demo)`, `patient_data.demo = true`), 59 sesiones y 177 resultados, creados por mateo vía API (`scripts/seed-demo-data.mjs --upload`; SQL en `database/seed/`). Para borrarlos: `DELETE FROM subjects WHERE patient_data->>'demo' = 'true'`.
 - Probado de punta a punta con Arrieta: ve los 8 de demo, guarda un viaje (3 filas, sesión completa) y aparece en su ficha del dashboard. La sesión de prueba se borró después.
 
+2026-10-07, despliegue separado (aviso de Vercel: 75 % de los 10 GB de Deployment Storage).
+- Causa: cada despliegue de la web pesa unos 500 MB (`public/frames` 350 MB y `DemoTecnica.mp4` 69 MB). Como la plataforma iba dentro, cada cambio redesplegaba la web entera.
+- Ahora la plataforma es el proyecto de Vercel **`fixedgap-plataforma`**:
+  - Conectado a GitHub `mpchachi/DiariodeArrieta` (rama `main`), con `rootDirectory: demo`.
+  - `demo/vercel.json`: build `node scripts/build-for-web.mjs --vercel` → `dist-vercel/plataforma`, más la reescritura de la SPA del dashboard y las cabeceras `noindex`/cámara.
+  - Variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (publishable) en Production.
+- La web (`mpchachi/fixedgap`) ya no contiene la plataforma. `next.config.ts` hace un rewrite de `/plataforma` y `/plataforma/:path*` a `https://fixedgap-plataforma.vercel.app/plataforma/...`.
+- **Para publicar la plataforma: `git push` a `DiariodeArrieta` main** (se despliega sola, unos 32 MB). NO tocar el repo de la web. `npm run build:web -- <web>` es el método antiguo.
+- Comprobado en producción: las 24 páginas de la web, login, dashboard, «Volver al Operador» y la detección de la mano a través del rewrite.
+- CLI: `npx vercel@61.1.0` (sesión iniciada como mpchachi).
+
 Pendiente / bugs vistos en el portátil de Mateo (Chrome, cámara real):
 1. **No detecta la mano** (2026-10-03, pendiente de confirmar con cámara real). Cambios hechos:
    - Vídeo a tamaño completo tapado por el lienzo.
