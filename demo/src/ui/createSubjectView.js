@@ -1,117 +1,215 @@
 import gsap from 'gsap';
 import { createSubject } from '../database/subjects.js';
 
+// Alta de paciente: formulario por secciones (título y explicación a la izquierda, campos a
+// la derecha), con selectores de botón en vez de desplegables. Los datos clínicos (solo
+// pacientes) se guardan en subjects.patient_data y los usa la ficha del dashboard.
+const NOW = new Date();
+const MAX_YEAR = Math.min(NOW.getFullYear(), 2025); // límite del esquema (birth_year ≤ 2025)
+const thisMonth = `${NOW.getFullYear()}-${String(NOW.getMonth() + 1).padStart(2, '0')}`;
+
+const choice = (name, options, { value = null, required = true } = {}) => `
+  <div class="nf-choice" role="radiogroup" data-name="${name}">
+    ${options.map(([v, label, hint]) => `
+      <label class="nf-option${hint ? ' has-hint' : ''}">
+        <input type="radio" name="${name}" value="${v}"${v === value ? ' checked' : ''}${required ? ' required' : ''} />
+        <span class="nf-option-label">${label}</span>
+        ${hint ? `<span class="nf-option-hint">${hint}</span>` : ''}
+      </label>`).join('')}
+  </div>`;
+
 export function showCreateSubject(container, onCreated, onCancel) {
   container.innerHTML = `
-    <div class="form-screen">
-      <div class="form-card">
-        <button id="cancel-btn" class="icon-button back-button" aria-label="Volver">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-        </button>
-        <h2 class="form-title">Nuevo paciente</h2>
-        <p class="form-subtitle">Registra un paciente o voluntario sano.</p>
-        
-        <form id="create-subject-form">
-          <div class="input-group">
-            <label for="display-name">Nombre o Pseudónimo</label>
-            <input type="text" id="display-name" required placeholder="E.g. Paciente A" />
+    <div class="op-screen nf-screen">
+      <header class="op-bar">
+        <div class="op-brand"><img src="${import.meta.env.BASE_URL}dashboard/logo.png" alt="" /><span>FixedGap</span></div>
+        <div class="nf-crumbs"><button type="button" class="nf-back" data-action="cancel">Pacientes</button><span aria-hidden="true">/</span><span>Nuevo paciente</span></div>
+      </header>
+      <main class="op-main nf-main">
+        <header class="op-head">
+          <div>
+            <h1>Nuevo paciente</h1>
+            <p>Registra a un paciente o a un voluntario sano para el grupo de referencia.</p>
           </div>
-          
-          <div class="input-row">
-            <div class="input-group">
-              <label for="birth-year">Año de Nacimiento</label>
-              <input type="number" id="birth-year" required min="1920" max="2025" placeholder="YYYY" />
-            </div>
-            
-            <div class="input-group">
-              <label for="sex">Sexo</label>
-              <select id="sex" required>
-                <option value="" disabled selected>Selecciona...</option>
-                <option value="female">Mujer</option>
-                <option value="male">Hombre</option>
-                <option value="other">Otro</option>
-              </select>
-            </div>
-          </div>
+        </header>
 
-          <div class="input-row">
-            <div class="input-group">
-              <label for="dominant-hand">Mano Dominante</label>
-              <select id="dominant-hand" required>
-                <option value="" disabled selected>Selecciona...</option>
-                <option value="right">Derecha (Diestro)</option>
-                <option value="left">Izquierda (Zurdo)</option>
-                <option value="ambidextrous">Ambidextro</option>
-              </select>
+        <form id="create-subject-form" class="nf-form" novalidate>
+          <section class="nf-section">
+            <div class="nf-aside">
+              <h2>Identificación</h2>
+              <p>Usa un pseudónimo o unas iniciales: no hace falta el nombre completo.</p>
             </div>
-            
-            <div class="input-group">
-              <label for="subject-type">Tipo</label>
-              <select id="subject-type" required>
-                <option value="healthy" selected>Sujeto Sano (Normativo)</option>
-                <option value="patient">Paciente</option>
-              </select>
+            <div class="nf-fields">
+              <label class="nf-field nf-span-2">
+                <span class="nf-label">Nombre o pseudónimo</span>
+                <input type="text" id="display-name" maxlength="60" autocomplete="off" required />
+              </label>
+              <label class="nf-field">
+                <span class="nf-label">Año de nacimiento</span>
+                <input type="number" id="birth-year" inputmode="numeric" min="1920" max="${MAX_YEAR}" required />
+                <span class="nf-help" data-role="age">&nbsp;</span>
+              </label>
+              <div class="nf-field">
+                <span class="nf-label">Sexo</span>
+                ${choice('sex', [['female', 'Mujer'], ['male', 'Hombre'], ['other', 'Otro']])}
+              </div>
             </div>
-          </div>
-          
-          <div class="input-group">
-            <label for="notes">Notas (Opcional)</label>
-            <textarea id="notes" rows="2" placeholder="Información clínica relevante..."></textarea>
-          </div>
+          </section>
 
-          <p id="form-error" class="error-message"></p>
-          
-          <button type="submit" class="auth-button">
-            <span class="btn-text">Registrar paciente</span>
-            <div class="btn-loader"></div>
-          </button>
+          <section class="nf-section">
+            <div class="nf-aside">
+              <h2>Perfil</h2>
+              <p>Los voluntarios sanos forman el grupo de referencia con el que se comparan los pacientes.</p>
+            </div>
+            <div class="nf-fields">
+              <div class="nf-field nf-span-2">
+                <span class="nf-label">Tipo</span>
+                ${choice('subject-type', [
+                  ['patient', 'Paciente', 'En rehabilitación tras un ictus.'],
+                  ['healthy', 'Voluntario sano', 'Sin patología motora; datos de referencia.'],
+                ], { value: 'patient' })}
+              </div>
+              <div class="nf-field nf-span-2">
+                <span class="nf-label">Mano dominante</span>
+                ${choice('dominant-hand', [['right', 'Derecha'], ['left', 'Izquierda'], ['ambidextrous', 'Ambidiestro']])}
+              </div>
+            </div>
+          </section>
+
+          <section class="nf-section" data-role="clinical">
+            <div class="nf-aside">
+              <h2>Datos clínicos</h2>
+              <p>Se muestran en la ficha del dashboard: días desde el ictus, lado afectado y movilidad.</p>
+            </div>
+            <div class="nf-fields">
+              <div class="nf-field nf-span-2">
+                <span class="nf-label">Lado afectado</span>
+                ${choice('affected-side', [['left', 'Izquierdo'], ['right', 'Derecho']])}
+              </div>
+              <div class="nf-field">
+                <span class="nf-label">Tipo de ictus</span>
+                ${choice('stroke-type', [['ischemic', 'Isquémico'], ['hemorrhagic', 'Hemorrágico']])}
+              </div>
+              <label class="nf-field">
+                <span class="nf-label">Fecha del ictus</span>
+                <input type="month" id="stroke-date" min="1990-01" max="${thisMonth}" required />
+                <span class="nf-help">Mes y año aproximados.</span>
+              </label>
+              <div class="nf-field nf-span-2">
+                <span class="nf-label">Movilidad</span>
+                ${choice('mobility', [
+                  ['agile', 'Ágil', 'Se mueve con soltura.'],
+                  ['moderate', 'Moderada', 'Algo de limitación.'],
+                  ['reduced', 'Reducida', 'Limitación importante.'],
+                ], { value: 'moderate' })}
+              </div>
+            </div>
+          </section>
+
+          <section class="nf-section">
+            <div class="nf-aside">
+              <h2>Notas</h2>
+              <p>Opcional. Lo que ayude al equipo a interpretar las sesiones.</p>
+            </div>
+            <div class="nf-fields">
+              <label class="nf-field nf-span-2">
+                <span class="nf-label">Notas <span class="nf-optional">(opcional)</span></span>
+                <textarea id="notes" rows="3" maxlength="2000"></textarea>
+              </label>
+            </div>
+          </section>
+
+          <footer class="nf-footer">
+            <p id="form-error" class="nf-error" role="alert"></p>
+            <button type="button" class="op-btn op-btn-ghost" data-action="cancel">Cancelar</button>
+            <button type="submit" class="op-btn op-btn-primary nf-submit">Registrar paciente</button>
+          </footer>
         </form>
-      </div>
+      </main>
     </div>
   `;
 
-  const formScreen = container.querySelector('.form-screen');
-  const formCard = container.querySelector('.form-card');
+  const screen = container.querySelector('.nf-screen');
   const form = document.getElementById('create-subject-form');
   const errorEl = document.getElementById('form-error');
-  const btn = form.querySelector('.auth-button');
+  const btn = form.querySelector('.nf-submit');
+  const clinical = form.querySelector('[data-role="clinical"]');
+  const yearEl = document.getElementById('birth-year');
+  const ageEl = form.querySelector('[data-role="age"]');
+  const val = name => form.querySelector(`input[name="${name}"]:checked`)?.value ?? null;
 
-  gsap.fromTo(formScreen, { opacity: 0 }, { opacity: 1, duration: 0.4 });
-  gsap.fromTo(formCard, { x: 30, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' });
+  gsap.fromTo(screen, { opacity: 0 }, { opacity: 1, duration: 0.3 });
+  document.getElementById('display-name').focus();
 
-  document.getElementById('cancel-btn').addEventListener('click', () => {
-    gsap.to(formCard, { x: 30, opacity: 0, duration: 0.3 });
-    gsap.to(formScreen, { opacity: 0, duration: 0.3, onComplete: onCancel });
+  // Datos clínicos solo para pacientes.
+  const syncType = () => {
+    const isPatient = val('subject-type') === 'patient';
+    clinical.hidden = !isPatient;
+    clinical.querySelectorAll('input').forEach(i => { i.disabled = !isPatient; });
+    btn.textContent = isPatient ? 'Registrar paciente' : 'Registrar voluntario';
+  };
+  form.querySelectorAll('input[name="subject-type"]').forEach(i => i.addEventListener('change', syncType));
+  syncType();
+
+  yearEl.addEventListener('input', () => {
+    const y = parseInt(yearEl.value, 10);
+    ageEl.textContent = y >= 1920 && y <= MAX_YEAR ? `${NOW.getFullYear() - y} años` : '\u00a0';
   });
 
-  form.addEventListener('submit', async (e) => {
+  const cancel = () => gsap.to(screen, { opacity: 0, duration: 0.2, onComplete: onCancel });
+  form.querySelectorAll('[data-action="cancel"]').forEach(b => b.addEventListener('click', cancel));
+  container.querySelector('.nf-back').addEventListener('click', cancel);
+
+  const fail = (msg, el) => {
+    errorEl.textContent = msg;
+    el?.closest('.nf-field')?.classList.add('is-invalid');
+    (el?.matches?.('input[type="radio"]') ? el : el)?.focus?.();
+  };
+  // Al corregir un campo se quitan su marca roja y el mensaje de error.
+  const clearError = el => { const f = el.closest('.nf-field'); if (f?.classList.contains('is-invalid')) { f.classList.remove('is-invalid'); errorEl.textContent = ''; } };
+  form.addEventListener('input', e => clearError(e.target));
+  form.addEventListener('change', e => clearError(e.target));
+
+  form.addEventListener('submit', async e => {
     e.preventDefault();
+    if (btn.disabled) return;
     errorEl.textContent = '';
-    btn.classList.add('loading');
+    form.querySelectorAll('.is-invalid').forEach(f => f.classList.remove('is-invalid'));
 
-    const subjectData = {
-      displayName: document.getElementById('display-name').value.trim(),
-      birthYear: parseInt(document.getElementById('birth-year').value, 10),
-      sex: document.getElementById('sex').value,
-      dominantHand: document.getElementById('dominant-hand').value,
-      subjectType: document.getElementById('subject-type').value,
+    const name = document.getElementById('display-name');
+    const year = parseInt(yearEl.value, 10);
+    const isPatient = val('subject-type') === 'patient';
+    if (!name.value.trim()) return fail('Escribe un nombre o pseudónimo.', name);
+    if (!(year >= 1920 && year <= MAX_YEAR)) return fail(`El año de nacimiento debe estar entre 1920 y ${MAX_YEAR}.`, yearEl);
+    for (const [n, msg] of [['sex', 'Indica el sexo.'], ['dominant-hand', 'Indica la mano dominante.']]) {
+      if (!val(n)) return fail(msg, form.querySelector(`input[name="${n}"]`));
+    }
+    const strokeDate = document.getElementById('stroke-date');
+    if (isPatient) {
+      if (!val('affected-side')) return fail('Indica el lado afectado.', form.querySelector('input[name="affected-side"]'));
+      if (!val('stroke-type')) return fail('Indica el tipo de ictus.', form.querySelector('input[name="stroke-type"]'));
+      if (!strokeDate.value || strokeDate.value > thisMonth) return fail('Indica el mes y el año del ictus.', strokeDate);
+    }
+
+    btn.disabled = true;
+    const result = await createSubject({
+      displayName: name.value.trim(),
+      birthYear: year,
+      sex: val('sex'),
+      dominantHand: val('dominant-hand'),
+      subjectType: isPatient ? 'patient' : 'healthy',
       notes: document.getElementById('notes').value.trim() || null,
-    };
-
-    const result = await createSubject(subjectData);
+      patientData: isPatient ? {
+        affectedSide: val('affected-side'), strokeType: val('stroke-type'),
+        strokeDate: `${strokeDate.value}-01`, mobility: val('mobility'),
+      } : null,
+    });
 
     if (result.ok) {
-      gsap.to(formCard, { scale: 0.95, opacity: 0, duration: 0.3 });
-      gsap.to(formScreen, { 
-        opacity: 0, 
-        duration: 0.3, 
-        delay: 0.1, 
-        onComplete: () => onCreated(result.subject) 
-      });
+      gsap.to(screen, { opacity: 0, duration: 0.25, onComplete: () => onCreated(result.subject) });
     } else {
-      btn.classList.remove('loading');
-      errorEl.textContent = result.error || 'Error al crear sujeto.';
-      gsap.fromTo(formCard, { x: -10 }, { x: 0, duration: 0.4, ease: "elastic.out(1, 0.3)" });
+      btn.disabled = false;
+      errorEl.textContent = 'No se ha podido registrar. Revisa la conexión e inténtalo de nuevo.';
     }
   });
 }

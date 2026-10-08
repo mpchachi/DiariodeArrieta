@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient.js';
 
-export async function createSubject({ displayName, birthYear, sex, dominantHand, subjectType = 'healthy', notes = null }) {
+// patientData (solo pacientes): { affectedSide, strokeType, strokeDate, mobility } — lo lee el dashboard.
+export async function createSubject({ displayName, birthYear, sex, dominantHand, subjectType = 'healthy', notes = null, patientData = null }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'Not authenticated' };
 
@@ -13,6 +14,7 @@ export async function createSubject({ displayName, birthYear, sex, dominantHand,
       sex,
       dominant_hand: dominantHand,
       subject_type: subjectType,
+      patient_data: subjectType === 'patient' ? patientData : null,
       notes,
     })
     .select()
