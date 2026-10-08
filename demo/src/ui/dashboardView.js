@@ -1,113 +1,112 @@
 import gsap from 'gsap';
+import { supabase } from '../database/supabaseClient.js';
 import { listSubjects } from '../database/subjects.js';
 import { getOperatorProfile, logout } from '../database/auth.js';
-import { initChatWidget } from './chatWidget.js';
+import { mountForum, esc } from './forumView.js';
 
+const SEX = { male: 'Hombre', female: 'Mujer', other: 'Otro' };
+const HAND = { right: 'mano derecha', left: 'mano izquierda', ambidextrous: 'ambidiestro' };
+const rtf = new Intl.RelativeTimeFormat('es', { numeric: 'auto' });
+function lastSession(iso) {
+  if (!iso) return 'Sin sesiones todavía';
+  const days = Math.round((Date.now() - new Date(iso).getTime()) / 86400000);
+  return `Última sesión ${days < 1 ? 'hoy' : rtf.format(-days, 'day')}`;
+}
+
+// Pantalla principal del operador: pestañas «Pacientes» (menú de tarjetas) y «Foro».
+// Firma compatible con main.js (onSelectPinch / onSelectSubject se mantienen por compatibilidad).
 export async function showDashboard(container, onSelectSubject, onCreateSubject, onLogout, onSelectPinch = null, onPlay = null) {
-  // Show a quick loader while fetching data
   container.innerHTML = `<div class="dash-loading"><div class="spinner-inner"><div class="spinner-bar"></div></div></div>`;
-  
-  const [operator, subjects] = await Promise.all([
-    getOperatorProfile(),
-    listSubjects()
-  ]);
 
-  let rawOperatorName = operator?.display_name || operator?.username || 'Operador';
-  const operatorName = rawOperatorName.charAt(0).toUpperCase() + rawOperatorName.slice(1).toLowerCase();
+  const [operator, subjects, { data: { user } }] = await Promise.all([getOperatorProfile(), listSubjects(), supabase.auth.getUser()]);
+  const ids = subjects.map(s => s.id);
+  const { data: sessions } = ids.length
+    ? await supabase.from('sessions').select('subject_id, started_at').in('subject_id', ids).order('started_at', { ascending: false })
+    : { data: [] };
+  const last = new Map(), count = new Map();
+  for (const s of sessions || []) { if (!last.has(s.subject_id)) last.set(s.subject_id, s.started_at); count.set(s.subject_id, (count.get(s.subject_id) || 0) + 1); }
 
-  let subjectsHtml = '';
-  if (subjects.length === 0) {
-    subjectsHtml = `
-      <div class="empty-state">
-        <p>No tienes sujetos registrados todavía.</p>
-      </div>
-    `;
-  } else {
-    subjectsHtml = subjects.map(s => `
-      <div class="subject-entry">
-        <button class="subject-card" data-id="${s.id}">
-          <div class="subject-avatar">${s.display_name.charAt(0).toUpperCase()}</div>
-          <div class="subject-info">
-            <h3>${s.display_name}</h3>
-            <p>${s.sex === 'male' ? 'Hombre' : s.sex === 'female' ? 'Mujer' : 'Otro'}, Nacido en ${s.birth_year}</p>
+  const name = operator?.display_name || operator?.username || 'Operador';
+  const base = import.meta.env.BASE_URL;
+  const year = new Date().getFullYear();
+  const play = onPlay || onSelectPinch || onSelectSubject;
+
+  const tiles = subjects.map(s => {
+    const n = count.get(s.id) || 0;
+    return `
+      <article class="pt-card" data-id="${s.id}">
+        <div class="pt-top">
+          <div class="pt-avatar" aria-hidden="true">${esc(s.display_name.charAt(0).toUpperCase())}</div>
+          <div class="pt-who">
+            <h3>${esc(s.display_name)}</h3>
+            <p>${SEX[s.sex] || 'Otro'} · ${year - s.birth_year} años · ${HAND[s.dominant_hand] || ''}</p>
           </div>
-          <div class="subject-action">
-            <span>${onPlay ? 'Jugar' : onSelectPinch ? 'Jugar al Pastillero' : 'Seleccionar'}</span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          </div>
-        </button>
-        <div class="subject-secondary">
-          ${onPlay && onSelectPinch ? `<button class="text-button subject-pinch" data-id="${s.id}">Pastillero (pinza)</button>` : ''}
-          ${onSelectPinch || onPlay ? `<button class="text-button subject-legacy" data-id="${s.id}">Sesión anterior de 3 juegos</button>` : ''}
         </div>
-      </div>
-    `).join('');
-  }
+        <dl class="pt-facts">
+          <div><dt>Sesiones</dt><dd>${n}</dd></div>
+          <div><dt>Actividad</dt><dd>${lastSession(last.get(s.id))}</dd></div>
+        </dl>
+        <div class="pt-actions">
+          <button type="button" class="op-btn op-btn-primary" data-action="play">Jugar</button>
+          <a class="op-btn op-btn-ghost" href="${base}dashboard/patient/${encodeURIComponent(s.id)}">Ver ficha</a>
+        </div>
+      </article>`;
+  }).join('');
 
   container.innerHTML = `
-    <div class="dash-screen">
-      <header class="dash-header">
-        <div class="dash-logo">FixedGap</div>
-        <div class="dash-user">
-          <span class="operator-name">${operatorName}</span>
-          <button id="logout-btn" class="text-button">Cerrar Sesión</button>
+    <div class="op-screen">
+      <header class="op-bar">
+        <div class="op-brand"><img src="${base}dashboard/logo.png" alt="" /><span>FixedGap</span></div>
+        <nav class="op-tabs" aria-label="Secciones">
+          <button type="button" class="op-tab" data-tab="pacientes">Pacientes</button>
+          <button type="button" class="op-tab" data-tab="foro">Foro</button>
+          <a class="op-tab" href="${base}dashboard/">Dashboard clínico</a>
+        </nav>
+        <div class="op-user">
+          <span>${esc(name)}</span>
+          <button id="logout-btn" type="button" class="op-btn op-btn-ghost">Cerrar sesión</button>
         </div>
       </header>
-      
-      <main class="dash-main">
-        <div class="dash-toolbar">
-          <h2 class="dash-title">Tus Sujetos</h2>
-          <div class="dash-actions">
-            <button id="goto-dashboard-btn" class="secondary-button">Ir al Dashboard Clínico</button>
-            <button id="new-subject-btn" class="primary-button">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-              Nuevo Sujeto
+      <main class="op-main">
+        <section class="op-section" data-panel="pacientes">
+          <header class="op-head">
+            <div>
+              <h1>Pacientes</h1>
+              <p>Elige un paciente para empezar el viaje del zorro.</p>
+            </div>
+          </header>
+          <div class="pt-grid">
+            <button type="button" class="pt-card pt-new" id="new-subject-btn">
+              <span class="pt-new-plus" aria-hidden="true">+</span>
+              <span class="pt-new-label">Nuevo paciente</span>
+              <span class="pt-new-hint">Nombre o pseudónimo, año de nacimiento y mano dominante.</span>
             </button>
+            ${tiles}
           </div>
-        </div>
-        
-        <div class="subjects-list">
-          ${subjectsHtml}
-        </div>
+        </section>
+        <div data-panel="foro" hidden></div>
       </main>
-    </div>
-  `;
+    </div>`;
 
-  // Initialize the chat widget on the dashboard
-  initChatWidget(container);
+  const screen = container.querySelector('.op-screen');
+  gsap.fromTo(screen, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' });
 
-  const dashScreen = container.querySelector('.dash-screen');
-  gsap.fromTo(dashScreen, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' });
+  let unmountForum = null;
+  const show = tab => {
+    container.querySelectorAll('.op-tab[data-tab]').forEach(b => b.classList.toggle('is-active', b.dataset.tab === tab));
+    container.querySelector('[data-panel="pacientes"]').hidden = tab !== 'pacientes';
+    const forumEl = container.querySelector('[data-panel="foro"]');
+    forumEl.hidden = tab !== 'foro';
+    if (tab === 'foro' && !unmountForum) unmountForum = mountForum(forumEl, { me: user?.id });
+    history.replaceState(null, '', tab === 'foro' ? '#foro' : location.pathname + location.search);
+  };
+  container.querySelectorAll('.op-tab[data-tab]').forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
+  show(location.hash === '#foro' ? 'foro' : 'pacientes');
 
-  // Event Listeners
-  document.getElementById('logout-btn').addEventListener('click', async () => {
-    await logout();
-    gsap.to(dashScreen, { opacity: 0, duration: 0.3, onComplete: onLogout });
-  });
-
-  document.getElementById('goto-dashboard-btn').addEventListener('click', () => {
-    window.location.href = `${import.meta.env.BASE_URL}dashboard/`;
-  });
-
-  document.getElementById('new-subject-btn').addEventListener('click', () => {
-    gsap.to(dashScreen, { opacity: 0, x: -20, duration: 0.3, onComplete: onCreateSubject });
-  });
-
-  const subjectCards = container.querySelectorAll('.subject-card');
-  subjectCards.forEach(card => {
-    card.addEventListener('click', () => {
-      const subjectId = card.dataset.id;
-      gsap.to(dashScreen, { opacity: 0, scale: 0.98, duration: 0.4, onComplete: () => (onPlay || onSelectPinch || onSelectSubject)(subjectId) });
-    });
-  });
-  container.querySelectorAll('.subject-pinch').forEach(button => {
-    button.addEventListener('click', () => {
-      gsap.to(dashScreen, { opacity: 0, duration: 0.3, onComplete: () => onSelectPinch(button.dataset.id) });
-    });
-  });
-  container.querySelectorAll('.subject-legacy').forEach(button => {
-    button.addEventListener('click', () => {
-      gsap.to(dashScreen, { opacity: 0, duration: 0.3, onComplete: () => onSelectSubject(button.dataset.id) });
-    });
+  const leave = fn => { unmountForum?.(); gsap.to(screen, { opacity: 0, duration: 0.25, onComplete: fn }); };
+  document.getElementById('logout-btn').addEventListener('click', async () => { await logout(); leave(onLogout); });
+  document.getElementById('new-subject-btn').addEventListener('click', () => leave(onCreateSubject));
+  container.querySelectorAll('.pt-card[data-id] [data-action="play"]').forEach(btn => {
+    btn.addEventListener('click', () => { const id = btn.closest('.pt-card').dataset.id; leave(() => play(id)); });
   });
 }

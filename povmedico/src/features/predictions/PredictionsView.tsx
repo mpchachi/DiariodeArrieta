@@ -75,20 +75,20 @@ export function PredictionsView() {
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={combinedData} margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E8E0D8" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9B8E84' }} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#9B8E84' }} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #E8E0D8' }} />
-              <Area type="monotone" dataKey="ciHigh" stroke="none" fill="#4DBAB0" fillOpacity={0.1} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2DFDA" />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#75716B' }} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#75716B' }} />
+              <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #E2DFDA' }} />
+              <Area type="monotone" dataKey="ciHigh" stroke="none" fill="#75A9AF" fillOpacity={0.1} />
               <Area type="monotone" dataKey="ciLow" stroke="none" fill="#FFFFFF" fillOpacity={1} />
-              <Line type="monotone" dataKey="value" stroke="#4DBAB0" strokeWidth={2.5} dot={{ r: 2 }} connectNulls={false} />
-              <Line type="monotone" dataKey="predicted" stroke="#4DBAB0" strokeWidth={2} strokeDasharray="6 3" dot={{ r: 2 }} connectNulls={false} />
+              <Line type="monotone" dataKey="value" stroke="#75A9AF" strokeWidth={2.5} dot={{ r: 2 }} connectNulls={false} />
+              <Line type="monotone" dataKey="predicted" stroke="#75A9AF" strokeWidth={2} strokeDasharray="6 3" dot={{ r: 2 }} connectNulls={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
         <div className="flex items-center gap-4 mt-3 text-xs text-clay-text-muted">
           <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-clay-distal inline-block" /> Histórico</span>
-          <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-clay-distal inline-block border-dashed" style={{ borderTop: '2px dashed #4DBAB0', height: 0 }} /> Predicción</span>
+          <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-clay-distal inline-block border-dashed" style={{ borderTop: '2px dashed #75A9AF', height: 0 }} /> Predicción</span>
           <span className="flex items-center gap-1"><span className="w-4 h-3 bg-clay-distal/10 inline-block rounded" /> Intervalo de confianza</span>
         </div>
       </Card>
@@ -97,15 +97,15 @@ export function PredictionsView() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>
           <h3 className="text-sm font-bold text-clay-text mb-3">Riesgo de meseta</h3>
-          <GaugeBar value={prediction.plateauRisk * 100} color="#E8B44C" />
-          <div className="text-center text-2xl font-bold tabular-nums mt-2" style={{ color: prediction.plateauRisk > 0.6 ? '#E05D5D' : '#E8B44C' }}>
+          <GaugeBar value={prediction.plateauRisk * 100} color="#B27923" />
+          <div className="text-center text-2xl font-bold tabular-nums mt-2" style={{ color: prediction.plateauRisk > 0.6 ? '#AF3D36' : '#B27923' }}>
             {Math.round(prediction.plateauRisk * 100)}%
           </div>
         </Card>
         <Card>
           <h3 className="text-sm font-bold text-clay-text mb-3">Riesgo de abandono</h3>
-          <GaugeBar value={prediction.dropoutRisk * 100} color="#E05D5D" />
-          <div className="text-center text-2xl font-bold tabular-nums mt-2" style={{ color: prediction.dropoutRisk > 0.5 ? '#E05D5D' : '#E8B44C' }}>
+          <GaugeBar value={prediction.dropoutRisk * 100} color="#AF3D36" />
+          <div className="text-center text-2xl font-bold tabular-nums mt-2" style={{ color: prediction.dropoutRisk > 0.5 ? '#AF3D36' : '#B27923' }}>
             {Math.round(prediction.dropoutRisk * 100)}%
           </div>
         </Card>
@@ -117,10 +117,10 @@ export function PredictionsView() {
           <div className="h-32">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={milestoneData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E8E0D8" />
-                <XAxis dataKey="week" tick={{ fontSize: 9, fill: '#9B8E84' }} label={{ value: 'Semana', fontSize: 9, fill: '#9B8E84' }} />
-                <YAxis domain={[0, 1]} tick={{ fontSize: 9, fill: '#9B8E84' }} />
-                <Line type="monotone" dataKey="p" stroke="#6BBF7B" strokeWidth={2} dot={{ r: 2 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2DFDA" />
+                <XAxis dataKey="week" tick={{ fontSize: 9, fill: '#75716B' }} label={{ value: 'Semana', fontSize: 9, fill: '#75716B' }} />
+                <YAxis domain={[0, 1]} tick={{ fontSize: 9, fill: '#75716B' }} />
+                <Line type="monotone" dataKey="p" stroke="#3F774D" strokeWidth={2} dot={{ r: 2 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -133,11 +133,11 @@ export function PredictionsView() {
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={prediction.drivers} layout="vertical" margin={{ top: 5, right: 30, bottom: 5, left: 100 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E8E0D8" />
-              <XAxis type="number" tick={{ fontSize: 10, fill: '#9B8E84' }} />
-              <YAxis dataKey="feature" type="category" tick={{ fontSize: 11, fill: '#6B5E54' }} width={95} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #E8E0D8' }} />
-              <Bar dataKey="weight" fill="#4DBAB0" radius={[0, 6, 6, 0]} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2DFDA" />
+              <XAxis type="number" tick={{ fontSize: 10, fill: '#75716B' }} />
+              <YAxis dataKey="feature" type="category" tick={{ fontSize: 11, fill: '#5F5A54' }} width={95} />
+              <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #E2DFDA' }} />
+              <Bar dataKey="weight" fill="#75A9AF" radius={[0, 6, 6, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

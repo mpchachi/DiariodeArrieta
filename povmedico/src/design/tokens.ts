@@ -1,25 +1,25 @@
 export const colors = {
-  background: '#F5F1EC',
-  surface: '#FFFFFF',
-  surfaceElevated: '#FBF8F5',
-  surfaceHover: '#F0EBE5',
-  border: '#E6DDD4',
-  borderActive: '#D4C8BC',
+  background: '#F7F5F1',
+  surface: '#FDFBF9',
+  surfaceElevated: '#F3F0EB',
+  surfaceHover: '#EEEBE5',
+  border: '#E2DFDA',
+  borderActive: '#C4C0BA',
 
-  accent: '#2BA89C',
-  accentSoft: 'rgba(43, 168, 156, 0.12)',
+  accent: '#1E1A15',
+  accentSoft: '#EBE7E1',
 
-  proximal: '#D4695C',
-  distal: '#2BA89C',
-  pronosup: '#5B8EC4',
+  proximal: '#AE643C',
+  distal: '#358189',
+  pronosup: '#646298',
 
-  ok: '#4CAF82',
-  warning: '#D4943A',
-  alert: '#C4524A',
+  ok: '#3F774D',
+  warning: '#B27923',
+  alert: '#AF3D36',
 
-  text: '#2A2218',
-  textSecondary: '#5C5043',
-  textMuted: '#8C7F73',
+  text: '#1E1A15',
+  textSecondary: '#4F4943',
+  textMuted: '#75716B',
 } as const;
 
 export const shadows = {
@@ -37,9 +37,9 @@ export const radii = {
 } as const;
 
 export const chartTheme = {
-  grid: '#E6DDD4',
-  axisText: '#8C7F73',
-  labelText: '#5C5043',
-  tooltipBg: '#FFFFFF',
-  tooltipBorder: '#E6DDD4',
+  grid: '#E2DFDA',
+  axisText: '#75716B',
+  labelText: '#4F4943',
+  tooltipBg: '#FDFBF9',
+  tooltipBorder: '#E2DFDA',
 } as const;

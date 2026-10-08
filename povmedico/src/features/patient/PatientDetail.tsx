@@ -129,7 +129,7 @@ export function PatientDetail() {
       {lastSession && (
         <div className="grid grid-cols-3 gap-3 mb-6 stagger-children">
           <DomainCardWithBreakdown
-            color="#D4695C"
+            color="#AE643C"
             label="Precisión de pinza"
             game="La carrera (pinza) · M1"
             score={lastSession.derived.proximalGripScore}
@@ -141,7 +141,7 @@ export function PatientDetail() {
             ]}
           />
           <DomainCardWithBreakdown
-            color="#3D9B8F"
+            color="#358189"
             label="Extensión del índice"
             game="El globo (puño)"
             score={lastSession.derived.distalFlexExtScore}
@@ -153,7 +153,7 @@ export function PatientDetail() {
             ]}
           />
           <DomainCardWithBreakdown
-            color="#5B8EC4"
+            color="#646298"
             label="Rango de rotación"
             game="El huerto (giro) · M4"
             score={lastSession.derived.pronoSupScore}

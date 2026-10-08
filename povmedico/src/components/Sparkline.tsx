@@ -5,7 +5,7 @@ interface SparklineProps {
   color?: string;
 }
 
-export function Sparkline({ data, width = 80, height = 24, color = '#3D9B8F' }: SparklineProps) {
+export function Sparkline({ data, width = 80, height = 24, color = '#358189' }: SparklineProps) {
   if (data.length < 2) return null;
 
   const min = Math.min(...data);

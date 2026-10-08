@@ -26,9 +26,9 @@ export function RehabCorrelation() {
   };
 
   const domainColors: Record<string, string> = {
-    'proximal-grip': '#D4695C',
-    'distal-flex-ext': '#3D9B8F',
-    'prono-supination': '#5B8EC4',
+    'proximal-grip': '#AE643C',
+    'distal-flex-ext': '#358189',
+    'prono-supination': '#646298',
   };
 
   return (
@@ -161,9 +161,9 @@ function ExerciseCorrelation({
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E8E0D8" />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9B8E84' }} />
-                <YAxis tick={{ fontSize: 10, fill: '#9B8E84' }} domain={[0, 100]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2DFDA" />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#75716B' }} />
+                <YAxis tick={{ fontSize: 10, fill: '#75716B' }} domain={[0, 100]} />
                 <Tooltip />
                 <ReferenceArea
                   x1={startDate}
@@ -175,7 +175,7 @@ function ExerciseCorrelation({
                   strokeOpacity={0.3}
                 />
                 {events.filter(e => e.type === 'exercise-change').map(ev => (
-                  <ReferenceArea key={ev.id} x1={ev.date.slice(5)} x2={ev.date.slice(5)} stroke="#E8B44C" strokeDasharray="4 2" />
+                  <ReferenceArea key={ev.id} x1={ev.date.slice(5)} x2={ev.date.slice(5)} stroke="#B27923" strokeDasharray="4 2" />
                 ))}
                 <Line type="monotone" dataKey="score" stroke={color} strokeWidth={2} dot={{ r: 1.5 }} />
               </LineChart>
@@ -189,9 +189,9 @@ function ExerciseCorrelation({
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <ScatterChart margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E8E0D8" />
-                <XAxis dataKey="adherence" name="Adherencia %" tick={{ fontSize: 10, fill: '#9B8E84' }} domain={[0, 100]} />
-                <YAxis dataKey="delta" name="Δ Puntuación" tick={{ fontSize: 10, fill: '#9B8E84' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2DFDA" />
+                <XAxis dataKey="adherence" name="Adherencia %" tick={{ fontSize: 10, fill: '#75716B' }} domain={[0, 100]} />
+                <YAxis dataKey="delta" name="Δ Puntuación" tick={{ fontSize: 10, fill: '#75716B' }} />
                 <ZAxis range={[30, 30]} />
                 <Tooltip cursor={{ strokeDasharray: '3 3' }} />
                 <Scatter data={scatterData} fill={color} />

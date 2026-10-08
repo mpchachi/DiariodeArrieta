@@ -16,9 +16,9 @@ export function AnatomyModel({ derived, affectedSide }: Props) {
       <div className="h-80 rounded-clay-lg overflow-hidden bg-clay-surface-elevated">
         <Suspense fallback={<div className="flex items-center justify-center h-full text-clay-text-muted text-sm">Cargando modelo 3D...</div>}>
           <Canvas camera={{ position: [0, 0, 4], fov: 45 }} shadows>
-            <ambientLight intensity={0.6} color="#FFF5E6" />
-            <directionalLight position={[3, 5, 4]} intensity={0.8} color="#FFF0D0" castShadow />
-            <directionalLight position={[-2, 3, -2]} intensity={0.3} color="#E0F0FF" />
+            <ambientLight intensity={0.6} color="#F9EDD9" />
+            <directionalLight position={[3, 5, 4]} intensity={0.8} color="#F9EDD9" castShadow />
+            <directionalLight position={[-2, 3, -2]} intensity={0.3} color="#EAEAF5" />
 
             <ArmModel
               derived={derived}
@@ -70,9 +70,9 @@ function getRegionLabel(region: string): string {
 }
 
 function scoreToColor(score: number): string {
-  if (score >= 70) return '#6BBF7B';
-  if (score >= 40) return '#E8B44C';
-  return '#E05D5D';
+  if (score >= 70) return '#3F774D';
+  if (score >= 40) return '#B27923';
+  return '#AF3D36';
 }
 
 function ArmModel({ derived, affectedSide, onHover }: { derived: DerivedClinical; affectedSide: AffectedSide; onHover: (region: string | null) => void }) {
@@ -89,7 +89,7 @@ function ArmModel({ derived, affectedSide, onHover }: { derived: DerivedClinical
       {/* Torso reference (neutral) */}
       <mesh position={[0, 0.8, 0]} castShadow>
         <capsuleGeometry args={[0.4, 0.8, 8, 16]} />
-        <meshStandardMaterial color="#D4C8BE" roughness={0.9} metalness={0} />
+        <meshStandardMaterial color="#C4C0BA" roughness={0.9} metalness={0} />
       </mesh>
 
       {/* Upper arm / shoulder - proximal grip */}
@@ -148,15 +148,15 @@ function ArmModel({ derived, affectedSide, onHover }: { derived: DerivedClinical
       {/* Non-affected side (dimmed) */}
       <mesh position={[mirror * -0.7, 0.5, 0]} rotation={[0, 0, mirror * 0.3]} castShadow>
         <capsuleGeometry args={[0.15, 0.6, 8, 16]} />
-        <meshStandardMaterial color="#D4C8BE" roughness={0.9} metalness={0} opacity={0.5} transparent />
+        <meshStandardMaterial color="#C4C0BA" roughness={0.9} metalness={0} opacity={0.5} transparent />
       </mesh>
       <mesh position={[mirror * -1.1, -0.1, 0.1]} rotation={[0.2, 0, mirror * 0.6]} castShadow>
         <capsuleGeometry args={[0.12, 0.55, 8, 16]} />
-        <meshStandardMaterial color="#D4C8BE" roughness={0.9} metalness={0} opacity={0.5} transparent />
+        <meshStandardMaterial color="#C4C0BA" roughness={0.9} metalness={0} opacity={0.5} transparent />
       </mesh>
       <mesh position={[mirror * -1.4, -0.55, 0.2]} castShadow>
         <sphereGeometry args={[0.15, 16, 16]} />
-        <meshStandardMaterial color="#D4C8BE" roughness={0.9} metalness={0} opacity={0.5} transparent />
+        <meshStandardMaterial color="#C4C0BA" roughness={0.9} metalness={0} opacity={0.5} transparent />
       </mesh>
     </group>
   );

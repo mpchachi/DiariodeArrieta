@@ -80,10 +80,10 @@ export function SessionDrilldown({ sessionId }: Props) {
                   <div className="h-36 bg-clay-surface-elevated rounded-lg p-2 border border-clay-border/50">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={frameData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E8E0D8" />
-                        <XAxis dataKey="t" tick={{ fontSize: 9, fill: '#9B8E84' }} />
-                        <YAxis tick={{ fontSize: 9, fill: '#9B8E84' }} />
-                        <Tooltip contentStyle={{ borderRadius: '10px', border: '1px solid #E8E0D8', fontSize: '11px' }} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E2DFDA" />
+                        <XAxis dataKey="t" tick={{ fontSize: 9, fill: '#75716B' }} />
+                        <YAxis tick={{ fontSize: 9, fill: '#75716B' }} />
+                        <Tooltip contentStyle={{ borderRadius: '10px', border: '1px solid #E2DFDA', fontSize: '11px' }} />
                         <Line type="monotone" dataKey="value" stroke={gameColors[game.game]} strokeWidth={1.5} dot={false} />
                       </LineChart>
                     </ResponsiveContainer>

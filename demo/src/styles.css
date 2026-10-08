@@ -806,16 +806,16 @@ canvas#main, canvas#jarra-canvas, canvas#interruptores-canvas {
 /* =====================================================================
    LOGIN — tarjeta partida (panel de marca + formulario)
    ===================================================================== */
-.login-screen { background: #f3f4f7; color: #1d2433; padding: 24px; }
+.login-screen { background: oklch(97% 0.006 80); color: oklch(22% 0.012 70); padding: 24px; }
 .login-card {
   display: grid; grid-template-columns: 1fr 1fr;
   width: 100%; max-width: 920px; min-height: 520px;
-  background: #fff; border: 1px solid #e3e6ec; border-radius: 22px; overflow: hidden;
-  box-shadow: 0 24px 60px rgba(20, 30, 60, 0.12);
+  background: oklch(99% 0.004 80); border: 1px solid oklch(90.5% 0.008 80); border-radius: 22px; overflow: hidden;
+  box-shadow: 0 24px 60px oklch(22% 0.012 70 / 0.10);
 }
 .login-brand {
   position: relative; display: flex; flex-direction: column; justify-content: space-between;
-  padding: 40px; color: #fff; background-color: #0f1830;
+  padding: 40px; color: oklch(98% 0.004 80); background-color: #0f1830;
   /* Foto del panel (capturas de movimiento) con degradado para que el texto se lea. */
   background-image:
     linear-gradient(180deg, rgba(10, 18, 36, .75) 0%, rgba(10, 18, 36, .1) 30%, rgba(10, 18, 36, .35) 58%, rgba(8, 14, 30, .92) 100%),
@@ -829,38 +829,172 @@ canvas#main, canvas#jarra-canvas, canvas#interruptores-canvas {
 .login-pitch p { font-size: 15px; line-height: 1.5; color: #b9cbe6; font-weight: 600; }
 
 .login-form-pane { display: flex; flex-direction: column; justify-content: center; padding: 48px 44px; }
-.login-form-pane h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.4px; color: #141b2d; }
-.login-lead { margin: 6px 0 28px; color: #5f6b80; font-size: 15px; font-weight: 600; }
+.login-form-pane h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.4px; color: oklch(22% 0.012 70); }
+.login-lead { margin: 6px 0 28px; color: oklch(41% 0.012 70); font-size: 15px; font-weight: 600; }
 .login-field { display: block; margin-bottom: 18px; }
-.login-field > span { display: block; font-size: 14px; font-weight: 700; color: #2a3346; margin-bottom: 7px; }
+.login-field > span { display: block; font-size: 14px; font-weight: 700; color: oklch(30% 0.012 70); margin-bottom: 7px; }
 .login-field input {
-  width: 100%; height: 46px; padding: 0 14px; border: 1px solid #d6dbe4; border-radius: 11px;
-  background: #fff; color: #141b2d; font: 600 15px 'Nunito', sans-serif; outline: none;
+  width: 100%; height: 46px; padding: 0 14px; border: 1px solid oklch(85% 0.009 80); border-radius: 11px;
+  background: oklch(99% 0.004 80); color: oklch(22% 0.012 70); font: 600 15px 'Nunito', sans-serif; outline: none;
   transition: border-color .15s, box-shadow .15s;
 }
-.login-field input::placeholder { color: #a3acbb; }
-.login-field input:focus { border-color: #2f6fd6; box-shadow: 0 0 0 4px rgba(47, 111, 214, .12); }
+.login-field input::placeholder { color: oklch(66% 0.010 75); }
+.login-field input:focus { border-color: oklch(22% 0.012 70); box-shadow: 0 0 0 4px oklch(22% 0.012 70 / .12); }
 .login-password { position: relative; }
 .login-password input { padding-right: 84px; }
 .login-toggle {
   position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
-  border: 0; background: transparent; color: #2f6fd6; font: 700 13px 'Nunito', sans-serif;
+  border: 0; background: transparent; color: oklch(22% 0.012 70); font: 700 13px 'Nunito', sans-serif;
   padding: 8px 10px; border-radius: 8px; cursor: pointer;
 }
-.login-toggle:hover { background: #eef3fc; }
-.login-error { min-height: 20px; margin: -4px 0 12px; color: #c0392b; font-size: 14px; font-weight: 700; }
+.login-toggle:hover { background: oklch(94% 0.008 80); }
+.login-error { min-height: 20px; margin: -4px 0 12px; color: oklch(52% 0.15 27); font-size: 14px; font-weight: 700; }
 .login-submit {
-  height: 48px; padding: 0; border-radius: 11px; background: #16213e; color: #fff;
-  box-shadow: 0 8px 18px rgba(22, 33, 62, .22);
+  height: 48px; padding: 0; border-radius: 11px; background: oklch(22% 0.012 70); color: oklch(98% 0.004 80);
+  box-shadow: 0 8px 18px oklch(22% 0.012 70 / .18);
 }
-.login-submit:hover { background: #1f2d52; box-shadow: 0 10px 22px rgba(22, 33, 62, .28); filter: none; }
-.login-submit:active { box-shadow: 0 4px 10px rgba(22, 33, 62, .22); }
-.login-submit.loading .btn-loader { border-color: rgba(255,255,255,.3); border-top-color: #fff; }
-.login-foot { margin-top: 22px; text-align: center; color: #6b7588; font-size: 14px; font-weight: 600; }
+.login-submit:hover { background: oklch(30% 0.012 70); box-shadow: 0 10px 22px oklch(22% 0.012 70 / .24); filter: none; }
+.login-submit:active { box-shadow: 0 4px 10px oklch(22% 0.012 70 / .18); }
+.login-submit.loading .btn-loader { border-color: rgba(255,255,255,.3); border-top-color: oklch(98% 0.004 80); }
+.login-foot { margin-top: 22px; text-align: center; color: oklch(55% 0.010 75); font-size: 14px; font-weight: 600; }
 
 @media (max-width: 780px) {
   .login-card { grid-template-columns: 1fr; max-width: 440px; min-height: 0; }
   .login-brand { padding: 22px 26px; }
   .login-pitch { display: none; }
   .login-form-pane { padding: 32px 26px 28px; }
+}
+
+/* =====================================================================
+   OPERADOR — pacientes (menú de tarjetas) + foro. Paleta FixedGap (OKLCH):
+   papel cálido, tinta grafito, color solo para estados.
+   ===================================================================== */
+:root {
+  --fg-paper: oklch(97% 0.006 80);
+  --fg-card: oklch(99% 0.004 80);
+  --fg-paper-2: oklch(95.5% 0.007 80);
+  --fg-hover: oklch(94% 0.008 80);
+  --fg-rule: oklch(90.5% 0.008 80);
+  --fg-rule-2: oklch(81% 0.010 80);
+  --fg-ink: oklch(22% 0.012 70);
+  --fg-ink-2: oklch(41% 0.012 70);
+  --fg-muted: oklch(55% 0.010 75);
+  --fg-alert: oklch(52% 0.15 27);
+  --fg-on-ink: oklch(98% 0.004 80);
+}
+.op-screen { width: 100%; height: 100%; overflow-y: auto; background: var(--fg-paper); color: var(--fg-ink); }
+.op-bar {
+  position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 28px;
+  padding: 14px 32px; background: var(--fg-card); border-bottom: 1px solid var(--fg-rule);
+}
+.op-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 17px; }
+.op-brand img { width: 30px; height: 30px; border-radius: 8px; }
+.op-tabs { display: flex; gap: 4px; flex: 1; }
+.op-tab {
+  border: 0; background: transparent; color: var(--fg-ink-2); text-decoration: none;
+  font: 700 14px 'Nunito', sans-serif; padding: 8px 14px; border-radius: 9px; cursor: pointer;
+}
+.op-tab:hover { background: var(--fg-hover); color: var(--fg-ink); }
+.op-tab.is-active { background: var(--fg-ink); color: var(--fg-on-ink); }
+.op-user { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 14px; color: var(--fg-ink-2); }
+.op-main { max-width: 1080px; margin: 0 auto; padding: 36px 32px 64px; }
+.op-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.op-head h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
+.op-head p { margin-top: 4px; color: var(--fg-ink-2); font-weight: 600; }
+.op-muted { color: var(--fg-muted); font-weight: 600; }
+.op-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 16px;
+  border-radius: 10px; font: 800 14px 'Nunito', sans-serif; cursor: pointer; text-decoration: none;
+  border: 1px solid transparent; transition: background-color .15s, border-color .15s, color .15s;
+}
+.op-btn-primary { background: var(--fg-ink); color: var(--fg-on-ink); }
+.op-btn-primary:hover { background: oklch(30% 0.012 70); }
+.op-btn-primary:disabled { opacity: .5; cursor: default; }
+.op-btn-ghost { background: transparent; color: var(--fg-ink); border-color: var(--fg-rule); }
+.op-btn-ghost:hover { background: var(--fg-hover); border-color: var(--fg-rule-2); }
+.op-btn:focus-visible, .op-tab:focus-visible, .forum-link:focus-visible { outline: 2px solid var(--fg-ink); outline-offset: 2px; }
+
+/* Pacientes: menú de tarjetas */
+.pt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.pt-card {
+  display: flex; flex-direction: column; gap: 18px; min-height: 220px; padding: 20px;
+  background: var(--fg-card); border: 1px solid var(--fg-rule); border-radius: 16px; text-align: left;
+  box-shadow: 0 1px 2px oklch(22% 0.012 70 / 0.05); transition: border-color .15s, box-shadow .15s;
+}
+.pt-card:hover { border-color: var(--fg-rule-2); box-shadow: 0 4px 14px oklch(22% 0.012 70 / 0.07); }
+.pt-top { display: flex; align-items: center; gap: 14px; }
+.pt-avatar {
+  width: 48px; height: 48px; flex: none; border-radius: 14px; display: grid; place-items: center;
+  background: var(--fg-paper-2); border: 1px solid var(--fg-rule); font-size: 20px; font-weight: 800;
+}
+.pt-who h3 { font-size: 18px; font-weight: 800; letter-spacing: -0.2px; }
+.pt-who p { font-size: 13px; color: var(--fg-ink-2); font-weight: 600; margin-top: 2px; }
+.pt-facts { display: grid; grid-template-columns: auto 1fr; gap: 14px; padding: 12px 0; border-top: 1px solid var(--fg-rule); border-bottom: 1px solid var(--fg-rule); }
+.pt-facts dt { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-muted); }
+.pt-facts dd { font-size: 14px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.pt-actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: auto; }
+.pt-new {
+  align-items: flex-start; justify-content: center; cursor: pointer; font-family: 'Nunito', sans-serif;
+  background: var(--fg-paper); border: 1.5px dashed var(--fg-rule-2); box-shadow: none; color: var(--fg-ink);
+}
+.pt-new:hover { background: var(--fg-card); border-color: var(--fg-ink-2); }
+.pt-new-plus { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--fg-ink); color: var(--fg-on-ink); font-size: 26px; font-weight: 700; line-height: 1; }
+.pt-new-label { font-size: 18px; font-weight: 800; }
+.pt-new-hint { font-size: 13px; color: var(--fg-muted); font-weight: 600; margin-top: -10px; }
+
+/* Foro (tipo Reddit) */
+.forum { max-width: 760px; }
+.forum-composer { background: var(--fg-card); border: 1px solid var(--fg-rule); border-radius: 14px; padding: 12px; margin-bottom: 20px; }
+.forum-composer input, .forum-composer textarea, .forum-reply textarea {
+  width: 100%; border: 1px solid var(--fg-rule); border-radius: 10px; background: var(--fg-card); color: var(--fg-ink);
+  font: 600 15px 'Nunito', sans-serif; padding: 11px 13px; outline: none; resize: vertical;
+}
+.forum-composer input:focus, .forum-composer textarea:focus, .forum-reply textarea:focus { border-color: var(--fg-ink-2); box-shadow: 0 0 0 3px oklch(22% 0.012 70 / .08); }
+.forum-composer-more { display: none; margin-top: 10px; }
+.forum-composer.is-open .forum-composer-more { display: block; }
+.forum-composer-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.forum-error { color: var(--fg-alert); font-weight: 700; font-size: 14px; margin-right: auto; }
+.forum-feed { display: flex; flex-direction: column; gap: 12px; }
+.forum-post { display: grid; grid-template-columns: 40px 1fr; gap: 14px; padding: 18px; background: var(--fg-card); border: 1px solid var(--fg-rule); border-radius: 14px; }
+.forum-post.is-open { border-color: var(--fg-rule-2); }
+.forum-avatar { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--fg-paper-2); border: 1px solid var(--fg-rule); font-weight: 800; }
+.forum-avatar.is-small { width: 30px; height: 30px; border-radius: 9px; font-size: 13px; }
+.forum-meta { font-size: 13px; color: var(--fg-muted); font-weight: 600; }
+.forum-meta strong { color: var(--fg-ink-2); }
+.forum-title { margin: 4px 0 6px; font-size: 18px; font-weight: 800; letter-spacing: -0.2px; }
+.forum-title button { all: unset; cursor: pointer; }
+.forum-title button:hover { text-decoration: underline; text-underline-offset: 3px; }
+.forum-body { color: var(--fg-ink); font-size: 15px; line-height: 1.55; font-weight: 500; overflow-wrap: anywhere; }
+.forum-body p + p { margin-top: 8px; }
+.forum-body.is-clamped { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.forum-actions { display: flex; gap: 14px; margin-top: 10px; }
+.forum-link { border: 0; background: none; padding: 0; color: var(--fg-ink-2); font: 800 13px 'Nunito', sans-serif; cursor: pointer; }
+.forum-link:hover { color: var(--fg-ink); text-decoration: underline; text-underline-offset: 3px; }
+.forum-danger:hover { color: var(--fg-alert); }
+.forum-comments { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--fg-rule); display: flex; flex-direction: column; gap: 14px; }
+.forum-comment { display: grid; grid-template-columns: 30px 1fr; gap: 10px; }
+.forum-reply { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+.op-empty { padding: 40px 20px; text-align: center; border: 1.5px dashed var(--fg-rule-2); border-radius: 14px; font-weight: 700; }
+
+/* Nuevo paciente (formulario) con la misma paleta */
+.form-screen { background: var(--fg-paper); color: var(--fg-ink); }
+.form-card { background: var(--fg-card); border: 1px solid var(--fg-rule); box-shadow: 0 12px 40px oklch(22% 0.012 70 / .08); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.form-title { color: var(--fg-ink); }
+.form-subtitle { color: var(--fg-ink-2); }
+.form-screen .input-group label { color: var(--fg-ink-2); text-transform: none; letter-spacing: 0; font-size: 14px; }
+.form-screen .input-group input, .form-screen .input-group select, .form-screen .input-group textarea { background: var(--fg-card); border-color: var(--fg-rule); color: var(--fg-ink); }
+.form-screen .input-group input:focus, .form-screen .input-group select:focus { border-color: var(--fg-ink-2); background: var(--fg-card); box-shadow: 0 0 0 3px oklch(22% 0.012 70 / .08); }
+.form-screen .input-group input::placeholder { color: var(--fg-muted); }
+.form-screen .input-group select option { color: var(--fg-ink); }
+.form-screen .icon-button { background: var(--fg-paper-2); color: var(--fg-ink); }
+.form-screen .primary-button, .form-screen .auth-button { background: var(--fg-ink); color: var(--fg-on-ink); box-shadow: none; }
+.form-screen .primary-button:hover, .form-screen .auth-button:hover { filter: none; box-shadow: none; background: oklch(30% 0.012 70); }
+.form-screen .error-message { color: var(--fg-alert); }
+.dash-loading { background: var(--fg-paper); }
+
+@media (max-width: 720px) {
+  .op-bar { flex-wrap: wrap; gap: 10px 16px; padding: 12px 16px; }
+  .op-tabs { order: 3; flex-basis: 100%; overflow-x: auto; }
+  .op-user span { display: none; }
+  .op-main { padding: 24px 16px 48px; }
 }

@@ -5,9 +5,9 @@ interface ScoreRingProps {
 }
 
 function getColor(score: number): string {
-  if (score >= 70) return '#4CAF82';
-  if (score >= 40) return '#D4943A';
-  return '#C4524A';
+  if (score >= 70) return '#3F774D';
+  if (score >= 40) return '#B27923';
+  return '#AF3D36';
 }
 
 export function ScoreRing({ score, size = 56, delta }: ScoreRingProps) {

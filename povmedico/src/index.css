@@ -27,33 +27,43 @@
   --shadow-clay-inset: inset 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   */
 
-  /* ── Midnight Deep Blue (High-Tech Clinical) ── */
-  --color-clay-bg: #050B14; /* Casi negro azulado */
-  --color-clay-surface: rgba(10, 19, 38, 0.7); /* Deep blue-black semi-transparente */
-  --color-clay-surface-solid: #0A1326;
-  --color-clay-surface-elevated: #0E1A34;
-  --color-clay-surface-hover: #132242;
-  --color-clay-border: rgba(255, 255, 255, 0.05); /* Borde levísimo blanquecino */
-  --color-clay-border-active: rgba(0, 212, 255, 0.4);
+  /* ── Paleta FixedGap (criterio Hallmark: OKLCH, neutros tintados, un solo acento) ──
+     Interfaz monocroma: papel cálido, tinta grafito. El color se reserva para los DATOS:
+     3 dominios (uno por capítulo, misma luminosidad y croma bajo) y 3 estados clínicos. */
+  --color-clay-bg: oklch(97% 0.006 80);             /* papel */
+  --color-clay-surface: oklch(99% 0.004 80);        /* tarjeta */
+  --color-clay-surface-solid: oklch(99% 0.004 80);
+  --color-clay-surface-elevated: oklch(95.5% 0.007 80);
+  --color-clay-surface-hover: oklch(94% 0.008 80);
+  --color-clay-border: oklch(90.5% 0.008 80);       /* filete */
+  --color-clay-border-active: oklch(81% 0.010 80);
 
-  /* ── Accent (Electric Cyan & White) ── */
-  --color-accent: #00D4FF; /* Cyan brillante para máxima visibilidad en oscuros */
-  --color-accent-soft: rgba(0, 212, 255, 0.1);
+  /* ── Acento = tinta (navegación activa, botones, foco). Sin azul, sin neón. ── */
+  --color-accent: oklch(22% 0.012 70);
+  --color-accent-soft: oklch(93% 0.010 80);
 
-  /* ── Domain colors ── */
-  --color-dom-proximal: #FF4D4D;
-  --color-dom-distal: #00D4FF;
-  --color-dom-pronosup: #A855F7;
+  /* ── Dominios: La carrera (arcilla) · El globo (acero) · El huerto (crepúsculo) ── */
+  --color-dom-proximal: oklch(58% 0.11 48);
+  --color-dom-distal: oklch(56% 0.075 205);
+  --color-dom-pronosup: oklch(52% 0.085 285);
 
-  /* ── Semantic ── */
-  --color-ok: #10B981;
-  --color-warning: #F59E0B;
-  --color-alert: #EF4444;
+  /* ── Estados (siempre acompañados de texto o icono, nunca solo rojo/verde) ── */
+  --color-ok: oklch(52% 0.09 150);
+  --color-warning: oklch(62% 0.12 72);
+  --color-alert: oklch(52% 0.15 27);
 
-  /* ── Text (High contrast) ── */
-  --color-txt: #FFFFFF; /* Blanco puro para datos */
-  --color-txt-secondary: #94A3B8; /* Gris azulado para secundario */
-  --color-txt-muted: #475569;
+  /* ── Texto ── */
+  --color-txt: oklch(22% 0.012 70);                 /* tinta */
+  --color-txt-secondary: oklch(41% 0.012 70);
+  --color-txt-muted: oklch(55% 0.010 75);
+
+  /* ── Alias usados por algunas pantallas antiguas (antes no existían → sin color) ── */
+  --color-clay-text: var(--color-txt);
+  --color-clay-text-secondary: var(--color-txt-secondary);
+  --color-clay-text-muted: var(--color-txt-muted);
+  --color-clay-proximal: var(--color-dom-proximal);
+  --color-clay-distal: var(--color-dom-distal);
+  --color-clay-pronosup: var(--color-dom-pronosup);
 
   /* ── Radii ── */
   --radius-sm: 8px;
@@ -61,11 +71,11 @@
   --radius-lg: 16px;
   --radius-xl: 24px;
 
-  /* ── Shadows (Glassmorphic & Deep) ── */
-  --shadow-clay: 0 8px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  --shadow-clay-hover: 0 12px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  --shadow-clay-elevated: 0 16px 50px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  --shadow-clay-inset: inset 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+  /* ── Sombras: casi planas; la separación la dan los filetes ── */
+  --shadow-clay: 0 1px 2px oklch(22% 0.012 70 / 0.05);
+  --shadow-clay-hover: 0 2px 8px oklch(22% 0.012 70 / 0.07);
+  --shadow-clay-elevated: 0 6px 20px oklch(22% 0.012 70 / 0.08);
+  --shadow-clay-inset: inset 0 1px 2px oklch(22% 0.012 70 / 0.05);
 
   /* ── Fonts (Nunito headings, DM Sans body) ── */
   --font-display: 'Nunito', sans-serif;
@@ -189,8 +199,8 @@ h1, h2, h3, h4 {
 
 /* ── Selection ── */
 ::selection {
-  background: rgba(43, 168, 156, 0.18);
-  color: #2A2218;
+  background: oklch(90% 0.03 72);
+  color: oklch(22% 0.012 70);
 }
 
 /* ── Print ── */

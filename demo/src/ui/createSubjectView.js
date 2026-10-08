@@ -8,7 +8,7 @@ export function showCreateSubject(container, onCreated, onCancel) {
         <button id="cancel-btn" class="icon-button back-button" aria-label="Volver">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         </button>
-        <h2 class="form-title">Nuevo Sujeto</h2>
+        <h2 class="form-title">Nuevo paciente</h2>
         <p class="form-subtitle">Registra un paciente o voluntario sano.</p>
         
         <form id="create-subject-form">
@@ -62,7 +62,7 @@ export function showCreateSubject(container, onCreated, onCancel) {
           <p id="form-error" class="error-message"></p>
           
           <button type="submit" class="auth-button">
-            <span class="btn-text">Registrar Sujeto</span>
+            <span class="btn-text">Registrar paciente</span>
             <div class="btn-loader"></div>
           </button>
         </form>
