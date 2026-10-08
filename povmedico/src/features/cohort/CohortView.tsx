@@ -322,7 +322,7 @@ function PatientCard({ patient: p, sessions, expanded, onToggle, onNavigate, var
 
             {/* Info row */}
             <div className="text-[11px] text-txt-muted font-medium pt-2 space-y-1">
-              <div>{p.age} a · {p.strokeType === 'ischemic' ? 'Isquémico' : 'Hemorrágico'} · Prioridad {p.priorityScore.toFixed(1)}</div>
+              <div>{p.age} a · {p.strokeType ? `${p.strokeType === 'ischemic' ? 'Isquémico' : 'Hemorrágico'} · ` : ''}Prioridad {p.priorityScore.toFixed(1)}</div>
               <div>Puntuación global = media de agarre, coordinación y rotación. Prioridad = alertas, deterioro reciente y adherencia.</div>
             </div>
           </div>

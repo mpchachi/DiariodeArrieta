@@ -148,7 +148,7 @@ export interface Patient {
   pseudonym: string;
   age: number;
   sex: 'M' | 'F' | 'other';
-  strokeType: StrokeType;
+  strokeType: StrokeType | null; // null = no consta (el alta ya no lo pide)
   strokeDate: string;
   affectedSide: AffectedSide;
   mobility: MobilityLevel;

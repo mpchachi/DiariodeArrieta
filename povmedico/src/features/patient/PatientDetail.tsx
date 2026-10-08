@@ -63,7 +63,7 @@ export function PatientDetail() {
               <InfoPill>{patient.age} años · {patient.sex}</InfoPill>
               <InfoPill className="capitalize">{{ agile: 'Ágil', moderate: 'Moderado', reduced: 'Reducido' }[patient.mobility]}</InfoPill>
               <InfoPill>{patient.affectedSide === 'left' ? 'Lado izquierdo' : 'Lado derecho'}</InfoPill>
-              <InfoPill>{patient.strokeType === 'ischemic' ? 'Isquémico' : 'Hemorrágico'}</InfoPill>
+              {patient.strokeType && <InfoPill>{patient.strokeType === 'ischemic' ? 'Isquémico' : 'Hemorrágico'}</InfoPill>}
               <InfoPill>{daysSinceStroke} días desde el ictus</InfoPill>
             </div>
           </div>

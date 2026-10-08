@@ -67,7 +67,7 @@ export function showCreateSubject(container, onCreated, onCancel) {
                 ${choice('subject-type', [
                   ['patient', 'Paciente', 'En rehabilitación tras un ictus.'],
                   ['healthy', 'Voluntario sano', 'Sin patología motora; datos de referencia.'],
-                ], { value: 'patient' })}
+                ], { value: 'healthy' })}
               </div>
               <div class="nf-field nf-span-2">
                 <span class="nf-label">Mano dominante</span>
@@ -85,10 +85,6 @@ export function showCreateSubject(container, onCreated, onCancel) {
               <div class="nf-field nf-span-2">
                 <span class="nf-label">Lado afectado</span>
                 ${choice('affected-side', [['left', 'Izquierdo'], ['right', 'Derecho']])}
-              </div>
-              <div class="nf-field">
-                <span class="nf-label">Tipo de ictus</span>
-                ${choice('stroke-type', [['ischemic', 'Isquémico'], ['hemorrhagic', 'Hemorrágico']])}
               </div>
               <label class="nf-field">
                 <span class="nf-label">Fecha del ictus</span>
@@ -187,7 +183,6 @@ export function showCreateSubject(container, onCreated, onCancel) {
     const strokeDate = document.getElementById('stroke-date');
     if (isPatient) {
       if (!val('affected-side')) return fail('Indica el lado afectado.', form.querySelector('input[name="affected-side"]'));
-      if (!val('stroke-type')) return fail('Indica el tipo de ictus.', form.querySelector('input[name="stroke-type"]'));
       if (!strokeDate.value || strokeDate.value > thisMonth) return fail('Indica el mes y el año del ictus.', strokeDate);
     }
 
@@ -200,7 +195,7 @@ export function showCreateSubject(container, onCreated, onCancel) {
       subjectType: isPatient ? 'patient' : 'healthy',
       notes: document.getElementById('notes').value.trim() || null,
       patientData: isPatient ? {
-        affectedSide: val('affected-side'), strokeType: val('stroke-type'),
+        affectedSide: val('affected-side'),
         strokeDate: `${strokeDate.value}-01`, mobility: val('mobility'),
       } : null,
     });

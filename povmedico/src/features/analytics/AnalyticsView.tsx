@@ -182,7 +182,7 @@ export function PatientCohortComparison() {
         </Link>
       </div>
       <p className="text-[11px] text-txt-muted mb-3">
-        Comparado con {matchedPatients.length} pacientes (movilidad {{ agile: 'ágil', moderate: 'moderada', reduced: 'reducida' }[patient.mobility]}, ±10 años, {patient.strokeType})
+        Comparado con {matchedPatients.length} pacientes (movilidad {{ agile: 'ágil', moderate: 'moderada', reduced: 'reducida' }[patient.mobility]}, ±10 años{patient.strokeType ? `, ${patient.strokeType === 'ischemic' ? 'isquémico' : 'hemorrágico'}` : ''})
       </p>
       <div className="flex items-center gap-4">
         <div className="flex-1">

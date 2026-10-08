@@ -65,7 +65,7 @@ export function ReportView() {
             <div><span className="text-clay-text-muted">Edad:</span> {patient.age} años</div>
             <div><span className="text-clay-text-muted">Movilidad:</span> <span className="capitalize">{{ agile: 'Ágil', moderate: 'Moderado', reduced: 'Reducido' }[patient.mobility] ?? patient.mobility}</span></div>
             <div><span className="text-clay-text-muted">Lado afecto:</span> {patient.affectedSide === 'left' ? 'Izquierdo' : 'Derecho'}</div>
-            <div><span className="text-clay-text-muted">Tipo de ictus:</span> {patient.strokeType === 'ischemic' ? 'Isquémico' : 'Hemorrágico'}</div>
+            <div><span className="text-clay-text-muted">Tipo de ictus:</span> {patient.strokeType ? (patient.strokeType === 'ischemic' ? 'Isquémico' : 'Hemorrágico') : 'No consta'}</div>
             <div><span className="text-clay-text-muted">Fecha del ictus:</span> {patient.strokeDate}</div>
             <div><span className="text-clay-text-muted">Sesiones:</span> {sessions.length}</div>
             <div><span className="text-clay-text-muted">Periodo:</span> {firstSession.date} — {lastSession.date}</div>

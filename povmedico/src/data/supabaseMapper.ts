@@ -17,7 +17,7 @@ export function mapSupabaseSubject(subject: any): Patient {
     pseudonym: subject.display_name || 'Desconocido',
     age,
     sex: subject.sex || 'other',
-    strokeType: patientData.strokeType || 'ischemic',
+    strokeType: patientData.strokeType ?? null,
     strokeDate: patientData.strokeDate || new Date().toISOString().split('T')[0],
     affectedSide: patientData.affectedSide || (subject.dominant_hand === 'right' ? 'left' : 'right'),
     mobility: patientData.mobility || 'moderate',
