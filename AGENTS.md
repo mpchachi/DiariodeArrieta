@@ -265,3 +265,7 @@ Pendiente / bugs vistos en el portátil de Mateo (Chrome, cámara real):
 - `npm run test:pack-ui` — viaje completo: inicio, transiciones automáticas, 3 capítulos y final.
 - `npm run test:camera` — robustez de la cámara (desconexión, vídeo congelado, fallo GPU, cámara ocupada, pestaña oculta…).
 - `npm run build`.
+
+2026-10-08, menos ruido en el dashboard:
+- Borrados los 8 pacientes de demostración (con sesiones y resultados). `scripts/seed-demo-data.mjs` sigue disponible, pero no se usa.
+- `008`: mateo sale del «Equipo piloto». Arrieta y García se ven los pacientes entre sí; los de mateo solo los ve mateo (y mateo no ve los de ellos).
