@@ -20,12 +20,12 @@ export function showLogin(container, onLoginSuccess) {
           <form id="login-form" novalidate>
             <label class="login-field">
               <span>Usuario</span>
-              <input type="text" id="username" required autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="p. ej. DrGarcia" />
+              <input type="text" id="username" required autocomplete="username" autocapitalize="none" spellcheck="false" />
             </label>
             <label class="login-field">
               <span>Contraseña</span>
               <div class="login-password">
-                <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••" />
+                <input type="password" id="password" required autocomplete="current-password" />
                 <button type="button" class="login-toggle" aria-label="Mostrar contraseña" aria-pressed="false">Mostrar</button>
               </div>
             </label>
