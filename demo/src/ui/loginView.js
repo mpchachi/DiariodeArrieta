@@ -82,9 +82,12 @@ export function showLogin(container, onLoginSuccess) {
       gsap.to(authScreen, { opacity: 0, duration: 0.4, delay: 0.2, onComplete: () => onLoginSuccess(result.user) });
     } else {
       btn.classList.remove('loading');
-      errorEl.textContent = /invalid login credentials/i.test(result.error || '')
-        ? 'Usuario o contraseña incorrectos.'
-        : (result.error || 'Error al iniciar sesión.');
+      const err = result.error || '';
+      console.error('[login]', err);
+      errorEl.textContent = /invalid login credentials/i.test(err) ? 'Usuario o contraseña incorrectos.'
+        : /rate limit|too many/i.test(err) ? 'Demasiados intentos. Espera un momento y vuelve a probar.'
+        : /fetch|network/i.test(err) ? 'Sin conexión con el servidor. Comprueba la red.'
+        : 'No se ha podido iniciar sesión. Inténtalo de nuevo.';
       pass.select();
       gsap.fromTo(card, { x: -10 }, { x: 0, duration: 0.4, ease: 'elastic.out(1, 0.3)' });
     }

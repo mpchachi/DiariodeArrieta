@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Patient, Session } from '../data/types';
 import { getPatients, getAllSessions } from '../data/api';
 import { computePriorityScore, computeAdherenceDeficit7d } from '../domain/priority';
+import { today } from '../domain/clock';
 
 export type ViewMode = 'list' | 'cards';
 export type ClinicianRole = 'physician' | 'physiotherapist' | 'occupational-therapist';
@@ -23,6 +24,7 @@ interface AppState {
   filters: Filters;
   patientPriorities: Map<string, number>;
   loaded: boolean;
+  error: string | null;
 
   load: () => Promise<void>;
   setViewMode: (mode: ViewMode) => void;
@@ -48,15 +50,21 @@ export const useStore = create<AppState>((set, get) => ({
   filters: { ...defaultFilters },
   patientPriorities: new Map(),
   loaded: false,
+  error: null,
 
   load: async () => {
-    const [patients, sessions] = await Promise.all([
-      getPatients(),
-      getAllSessions(),
-    ]);
+    let patients: Patient[];
+    let sessions: Session[];
+    try {
+      [patients, sessions] = await Promise.all([getPatients(), getAllSessions()]);
+    } catch (err) {
+      // loaded=true para salir del shimmer; la vista muestra el error.
+      set({ patients: [], sessions: [], loaded: true, error: err instanceof Error ? err.message : 'Error cargando datos' });
+      return;
+    }
 
     const priorities = new Map<string, number>();
-    const referenceDate = new Date('2026-05-28');
+    const referenceDate = today();
 
     for (const patient of patients) {
       const patientSessions = sessions
@@ -73,7 +81,7 @@ export const useStore = create<AppState>((set, get) => ({
       priorities.set(patient.id, computePriorityScore(lastDerived, last5Scores, adherenceDeficit));
     }
 
-    set({ patients, sessions, patientPriorities: priorities, loaded: true });
+    set({ patients, sessions, patientPriorities: priorities, loaded: true, error: null });
   },
 
   setViewMode: (mode) => set({ viewMode: mode }),
@@ -92,7 +100,8 @@ export const useStore = create<AppState>((set, get) => ({
     if (filters.mobility) filtered = filtered.filter(p => p.mobility === filters.mobility);
     if (filters.affectedSide) filtered = filtered.filter(p => p.affectedSide === filters.affectedSide);
     if (filters.strokeType) filtered = filtered.filter(p => p.strokeType === filters.strokeType);
-    if (filters.ageRange) filtered = filtered.filter(p => p.age >= filters.ageRange![0] && p.age <= filters.ageRange![1]);
+    // Los filtros ignoran pacientes sin el dato.
+    if (filters.ageRange) filtered = filtered.filter(p => p.age !== null && p.age >= filters.ageRange![0] && p.age <= filters.ageRange![1]);
     if (filters.clinicianId) filtered = filtered.filter(p => p.clinicianIds.includes(filters.clinicianId!));
     if (filters.search) {
       const q = filters.search.toLowerCase();
@@ -115,11 +124,6 @@ export const useStore = create<AppState>((set, get) => ({
           lastSession: patientSessions[patientSessions.length - 1],
         };
       })
-      .sort((a, b) => {
-        // Alpha (the real gameplay patient) always shows first.
-        if (a.id === 'pat-alpha') return -1;
-        if (b.id === 'pat-alpha') return 1;
-        return b.priorityScore - a.priorityScore;
-      });
+      .sort((a, b) => b.priorityScore - a.priorityScore);
   },
 }));

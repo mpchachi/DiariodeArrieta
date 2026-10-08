@@ -9,23 +9,39 @@ import type { Session } from '../../data/types';
 
 export function PredictionsView() {
   const { id } = useParams<{ id: string }>();
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [prediction, setPrediction] = useState<PatientPrediction | null>(null);
+  // undefined = cargando, null = no encontrado
+  const [patient, setPatient] = useState<Patient | null | undefined>(undefined);
+  const [sessions, setSessions] = useState<Session[] | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
+  // Se guarda la métrica junto al resultado: si no coincide con la seleccionada, está cargando.
+  // value null = datos insuficientes.
+  const [result, setResult] = useState<{ metric: string; value: PatientPrediction | null } | undefined>(undefined);
   const [metric, setMetric] = useState('globalMotorScore');
 
   useEffect(() => {
     if (!id) return;
-    getPatient(id).then(p => setPatient(p ?? null));
-    getSessions(id).then(s => setSessions(s.sort((a, b) => a.date.localeCompare(b.date))));
+    getPatient(id).then(p => setPatient(p ?? null)).catch(e => { setError(e.message); setPatient(null); });
+    getSessions(id).then(s => setSessions(s.sort((a, b) => a.date.localeCompare(b.date)))).catch(e => setError(e.message));
   }, [id]);
 
   useEffect(() => {
     if (!id) return;
-    getPrediction(id, metric).then(setPrediction);
+    getPrediction(id, metric).then(value => setResult({ metric, value })).catch(e => setError(e.message));
   }, [id, metric]);
 
-  if (!patient || !prediction) return <div className="text-clay-text-muted p-8">Cargando predicciones...</div>;
+  if (error) return <div className="p-8 text-alert">Error cargando datos: {error}</div>;
+  if (patient === undefined || sessions === undefined) return <div className="text-clay-text-muted p-8">Cargando predicciones...</div>;
+  if (patient === null) return <div className="p-8 text-txt-secondary">Paciente no encontrado. <Link to="/" className="text-accent">Volver al triaje</Link></div>;
+  if (sessions.length === 0) return <div className="p-8 text-txt-secondary">Sin sesiones todavía. <Link to={`/patient/${id}`} className="text-accent">Volver al paciente</Link></div>;
+  if (result === undefined || result.metric !== metric) return <div className="text-clay-text-muted p-8">Cargando predicciones...</div>;
+  const prediction = result.value;
+  if (prediction === null) {
+    return (
+      <div className="p-8 text-txt-secondary">
+        Datos insuficientes: hacen falta al menos 3 sesiones para proyectar. <Link to={`/patient/${id}`} className="text-accent">Volver al paciente</Link>
+      </div>
+    );
+  }
 
   const historicalData = sessions.slice(-20).map(s => ({
     date: s.date.slice(5),
@@ -62,7 +78,7 @@ export function PredictionsView() {
           <button
             key={m}
             onClick={() => setMetric(m)}
-            className={`px-3 py-1.5 rounded-clay-sm text-xs font-medium ${metric === m ? 'bg-clay-distal text-white' : 'bg-clay-border/30 text-clay-text-secondary hover:bg-clay-border/60'}`}
+            className={`px-3 py-1.5 rounded-sm text-xs font-medium ${metric === m ? 'bg-clay-distal text-white' : 'bg-clay-border/30 text-clay-text-secondary hover:bg-clay-border/60'}`}
           >
             {m.replace('Score', '').replace('global', 'Global').replace('proximalGrip', 'Proximal').replace('distalFlexExt', 'Distal').replace('pronoSup', 'Prono-Sup')}
           </button>
@@ -149,9 +165,9 @@ export function PredictionsView() {
 
 function GaugeBar({ value, color }: { value: number; color: string }) {
   return (
-    <div className="w-full h-4 bg-clay-border/30 rounded-clay-sm overflow-hidden">
+    <div className="w-full h-4 bg-clay-border/30 rounded-sm overflow-hidden">
       <div
-        className="h-full rounded-clay-sm transition-all duration-500"
+        className="h-full rounded-sm transition-all duration-500"
         style={{ width: `${Math.min(100, value)}%`, backgroundColor: color }}
       />
     </div>

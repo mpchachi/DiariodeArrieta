@@ -16,7 +16,17 @@ export async function uploadPlaythrough(subjectId, games, startedAt = null) {
     return { ok: false, error: 'Missing subjectId or games' };
   }
 
-  // 1. Create session (startedAt captures the real moment the player started)
+  // 1. Transformar primero: si algún juego no es válido no se crea una sesión vacía.
+  let rows;
+  try {
+    rows = games.map(({ finalized, accumulator }, i) => finalized ? transformGameResult(finalized, null, i + 1, accumulator) : null).filter(Boolean);
+  } catch (e) {
+    console.error('[upload] resultado no válido:', e.message);
+    return { ok: false, error: e.message };
+  }
+  if (!rows.length) return { ok: false, error: 'No games to upload' };
+
+  // 2. Create session (startedAt captures the real moment the player started)
   const sessionResult = await createSession(subjectId, startedAt);
   if (!sessionResult.ok) {
     console.error('[upload] Session creation failed:', sessionResult.error);
@@ -25,14 +35,11 @@ export async function uploadPlaythrough(subjectId, games, startedAt = null) {
 
   const sessionId = sessionResult.session.id;
 
-  // 2. Transform and insert each game result
+  // 3. Insert each game result
   const errors = [];
-  for (let i = 0; i < games.length; i++) {
-    const { finalized, accumulator } = games[i];
-    if (!finalized) continue;
-
-    const row = transformGameResult(finalized, sessionId, i + 1, accumulator);
-
+  for (const row0 of rows) {
+    const row = { ...row0, session_id: sessionId };
+    const i = row.play_order - 1;
     const { error, status, statusText } = await supabase
       .from('game_results')
       .insert(row);

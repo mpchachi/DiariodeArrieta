@@ -1,6 +1,9 @@
 import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 import { LandmarkFilter } from './OneEuroFilter.js';
 
+// MediaPipe local (misma copia verificada por hash que usa el Runner), nunca desde CDN ni modelo «latest».
+const PINCH_ASSETS_BASE = import.meta.env?.BASE_URL ?? '/';
+
 export class HandTracker {
   constructor({ maxHands = 2, resolution = { width: 960, height: 720 } } = {}) {
     this._callback = null;
@@ -21,12 +24,12 @@ export class HandTracker {
 
   async start(videoElement) {
     const vision = await FilesetResolver.forVisionTasks(
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm'
+      `${PINCH_ASSETS_BASE}pinch-assets/wasm`
     );
 
     this._handLandmarker = await HandLandmarker.createFromOptions(vision, {
       baseOptions: {
-        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task',
+        modelAssetPath: `${PINCH_ASSETS_BASE}pinch-assets/hand_landmarker.task`,
         delegate: 'GPU',
       },
       runningMode: 'VIDEO',

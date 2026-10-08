@@ -1,6 +1,9 @@
 import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 import { computeHandMetrics, computeAsymmetry, resetMetrics } from './metrics.js';
 
+// MediaPipe local (misma copia verificada por hash que usa el Runner), nunca desde CDN ni modelo «latest».
+const PINCH_ASSETS_BASE = import.meta.env?.BASE_URL ?? '/';
+
 const HAND_PALM   = [[0,1],[0,5],[0,17],[5,9],[9,13],[13,17]];
 const HAND_THUMB  = [[1,2],[2,3],[3,4]];
 const HAND_INDEX  = [[5,6],[6,7],[7,8]];
@@ -242,13 +245,13 @@ export function openClinicalView(container, onBack) {
       animId = requestAnimationFrame(processFrame);
 
       const vision = await FilesetResolver.forVisionTasks(
-        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm'
+        `${PINCH_ASSETS_BASE}pinch-assets/wasm`
       );
       if (destroyed) return;
 
       handLandmarker = await HandLandmarker.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task',
+          modelAssetPath: `${PINCH_ASSETS_BASE}pinch-assets/hand_landmarker.task`,
           delegate: 'GPU',
         },
         runningMode: 'VIDEO',

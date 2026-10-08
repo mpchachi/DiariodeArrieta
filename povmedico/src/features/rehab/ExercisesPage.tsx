@@ -10,18 +10,12 @@ import { Card } from '../../components/Card';
 import { colors, chartTheme } from '../../design/tokens';
 import type { ExerciseCatalogItem } from '../../data/reportTypes';
 import type { Session, PrescribedExercise } from '../../data/types';
+import { today } from '../../domain/clock';
+import { DOMAIN_LABELS, INTENSITY_LABELS, type Domain, type Intensity } from '../../domain/labels';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-type Domain = 'proximal-grip' | 'distal-flex-ext' | 'prono-supination';
-type Intensity = 'low' | 'medium' | 'high';
 type TabId = 'catalogo' | 'prescripciones' | 'correlacion' | 'adherencia';
-
-const DOMAIN_LABELS: Record<Domain, string> = {
-  'proximal-grip': 'Agarre',
-  'distal-flex-ext': 'Coordinación',
-  'prono-supination': 'Rotación',
-};
 
 const DOMAIN_COLORS: Record<Domain, string> = {
   'proximal-grip': colors.proximal,
@@ -41,12 +35,6 @@ const DOMAIN_EXPLANATIONS: Record<Domain, string> = {
   'prono-supination': 'los ejercicios de rotación deberían reflejarse en más rango, mejor precisión de vertido y menos error de control.',
 };
 
-const INTENSITY_LABELS: Record<Intensity, string> = {
-  low: 'Baja',
-  medium: 'Media',
-  high: 'Alta',
-};
-
 const DOMAIN_SCORE_KEY: Record<Domain, keyof Session['derived']> = {
   'proximal-grip': 'proximalGripScore',
   'distal-flex-ext': 'distalFlexExtScore',
@@ -63,7 +51,7 @@ const TABS: { id: TabId; label: string }[] = [
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function computeAdherence14d(exercise: PrescribedExercise): number {
-  const now = new Date('2026-05-28');
+  const now = today();
   const twoWeeksAgo = new Date(now);
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 

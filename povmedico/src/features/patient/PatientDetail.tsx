@@ -10,20 +10,27 @@ import { TimeSeriesPanel } from './TimeSeriesPanel';
 import { SessionDrilldown } from './SessionDrilldown';
 import { PatientCohortComparison } from '../analytics/AnalyticsView';
 import { differenceInDays } from 'date-fns';
+import { today } from '../../domain/clock';
+import { FLAG_LABELS } from '../../domain/thresholds';
+import { MOBILITY_LABELS, SEX_LABELS } from '../../domain/labels';
 
 export function PatientDetail() {
   const { id } = useParams<{ id: string }>();
-  const [patient, setPatient] = useState<Patient | null>(null);
+  // undefined = cargando, null = no encontrado
+  const [patient, setPatient] = useState<Patient | null | undefined>(undefined);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
-    getPatient(id).then(p => setPatient(p ?? null));
-    getSessions(id).then(s => setSessions(s.sort((a, b) => a.date.localeCompare(b.date))));
+    getPatient(id).then(p => setPatient(p ?? null)).catch(e => { setError(e.message); setPatient(null); });
+    getSessions(id).then(s => setSessions(s.sort((a, b) => a.date.localeCompare(b.date)))).catch(e => setError(e.message));
   }, [id]);
 
-  if (!patient) {
+  if (error) return <div className="p-8 text-alert">Error cargando datos: {error}</div>;
+
+  if (patient === undefined) {
     return (
       <div className="space-y-4">
         <div className="h-32 rounded-lg animate-shimmer" />
@@ -34,9 +41,17 @@ export function PatientDetail() {
     );
   }
 
+  if (patient === null) {
+    return (
+      <div className="p-8 text-center text-txt-secondary">
+        Paciente no encontrado. <Link to="/" className="text-accent">Volver al triaje</Link>
+      </div>
+    );
+  }
+
   const lastSession = sessions[sessions.length - 1];
   const baselineSession = sessions[0];
-  const daysSinceStroke = differenceInDays(new Date('2026-05-28'), new Date(patient.strokeDate));
+  const daysSinceStroke = patient.strokeDate ? differenceInDays(today(), new Date(patient.strokeDate)) : null;
   const deltaVsBaseline = lastSession && baselineSession
     ? lastSession.derived.globalMotorScore - baselineSession.derived.globalMotorScore
     : 0;
@@ -60,11 +75,11 @@ export function PatientDetail() {
           <div>
             <h1 className="text-xl font-semibold text-txt tracking-tight">{patient.pseudonym}</h1>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <InfoPill>{patient.age} años · {patient.sex}</InfoPill>
-              <InfoPill className="capitalize">{{ agile: 'Ágil', moderate: 'Moderado', reduced: 'Reducido' }[patient.mobility]}</InfoPill>
-              <InfoPill>{patient.affectedSide === 'left' ? 'Lado izquierdo' : 'Lado derecho'}</InfoPill>
+              <InfoPill>{patient.age !== null ? `${patient.age} años` : 'Edad: no consta'} · {patient.sex ? SEX_LABELS[patient.sex] : 'Sexo: no consta'}</InfoPill>
+              <InfoPill>{patient.mobility ? MOBILITY_LABELS[patient.mobility] : 'Movilidad: no consta'}</InfoPill>
+              <InfoPill>{patient.affectedSide ? (patient.affectedSide === 'left' ? 'Lado izquierdo' : 'Lado derecho') : 'Lado afecto: no consta'}</InfoPill>
               {patient.strokeType && <InfoPill>{patient.strokeType === 'ischemic' ? 'Isquémico' : 'Hemorrágico'}</InfoPill>}
-              <InfoPill>{daysSinceStroke} días desde el ictus</InfoPill>
+              <InfoPill>{daysSinceStroke !== null ? `${daysSinceStroke} días desde el ictus` : 'Fecha del ictus: no consta'}</InfoPill>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -92,24 +107,28 @@ export function PatientDetail() {
         </div>
       </Card>
 
+      {sessions.length === 0 && (
+        <Card className="mb-6 text-center text-txt-secondary">Sin sesiones todavía</Card>
+      )}
+
       {/* Clinical Indicators */}
       {lastSession && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 stagger-children">
           <TremorIndicator level={lastSession.derived.tremorLevel} />
           <IndicatorCard
-            label="Movimiento fragmentado"
+            label={FLAG_LABELS.spasticityFlag}
             active={lastSession.derived.spasticityFlag}
             tooltip="Movimiento con interrupciones frecuentes (jerk elevado). Puede indicar espasticidad, co-contracción u otra limitación del control motor. Requiere valoración clínica."
             icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>}
           />
           <IndicatorCard
-            label="Fatiga motora"
+            label={FLAG_LABELS.fatigueFlag}
             active={lastSession.derived.fatigueFlag}
             tooltip="Caída >20% en velocidad pico entre las primeras y últimas repeticiones de la sesión. Sugiere fatiga neuromuscular central."
             icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 12h-4l-3 9-4-18-3 9H2"/></svg>}
           />
           <IndicatorCard
-            label="Control de precisión reducido"
+            label={FLAG_LABELS.impulseControlFlag}
             active={lastSession.derived.impulseControlFlag}
             tooltip="Errores frecuentes en la tarea de vertido (derramamiento). Puede reflejar déficit de control fino, falta de práctica o dificultad inhibitoria."
             icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
@@ -205,7 +224,11 @@ export function PatientDetail() {
               {[...sessions].reverse().map((s, i) => (
                 <tr
                   key={s.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={s.id === selectedSessionId}
                   onClick={() => setSelectedSessionId(s.id === selectedSessionId ? null : s.id)}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedSessionId(s.id === selectedSessionId ? null : s.id); } }}
                   className={`border-b border-clay-border/50 cursor-pointer transition-all ${s.id === selectedSessionId ? 'bg-accent/8 border-l-2 border-l-accent' : `hover:bg-clay-surface-hover ${i % 2 === 0 ? '' : 'bg-clay-surface-elevated/30'}`}`}
                 >
                   <td className="py-2.5 px-2 tabular-nums text-[13px]">{s.date}</td>
@@ -253,9 +276,16 @@ function InfoPill({ children, className = '' }: { children: React.ReactNode; cla
   );
 }
 
-function ActionButton({ to, color, label, icon }: { to: string; color: string; label: string; icon: React.ReactNode }) {
+// Clases literales: Tailwind v4 no genera `bg-${color}/15` dinámico.
+const ACTION_CLASSES = {
+  'accent': 'bg-accent/15 border-accent/25 text-accent hover:bg-accent/25',
+  'dom-proximal': 'bg-dom-proximal/15 border-dom-proximal/25 text-dom-proximal hover:bg-dom-proximal/25',
+  'dom-pronosup': 'bg-dom-pronosup/15 border-dom-pronosup/25 text-dom-pronosup hover:bg-dom-pronosup/25',
+} as const;
+
+function ActionButton({ to, color, label, icon }: { to: string; color: keyof typeof ACTION_CLASSES; label: string; icon: React.ReactNode }) {
   return (
-    <Link to={to} className={`px-4 py-2.5 rounded-md bg-${color}/15 border border-${color}/25 text-${color} text-[13px] font-medium hover:bg-${color}/25 no-underline transition-all flex items-center gap-2`}>
+    <Link to={to} className={`px-4 py-2.5 rounded-md border text-[13px] font-medium no-underline transition-all flex items-center gap-2 ${ACTION_CLASSES[color]}`}>
       {icon}
       {label}
     </Link>

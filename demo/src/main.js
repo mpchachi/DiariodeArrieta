@@ -108,7 +108,8 @@ async function runDemo() {
   if (cleanupLoader) cleanupLoader();
   
   if (uploadResult && !uploadResult.ok) {
-    alert("Hubo un problema al subir la sesión: " + uploadResult.error);
+    console.error('[main] subida de sesión fallida:', uploadResult.error);
+    alert('No se ha podido guardar la sesión. Comprueba la conexión e inténtalo de nuevo.');
   }
 
   // Go back to the dashboard after completing the session

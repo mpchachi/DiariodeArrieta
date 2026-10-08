@@ -8,6 +8,12 @@ function safeNum(v) {
   return typeof v === 'number' && isFinite(v) ? v : null;
 }
 
+// Columnas smallint de game_results: fuera de rango el insert falla y la sesión queda incompleta.
+function smallint(v) {
+  const n = safeNum(v);
+  return n === null ? null : Math.max(-32768, Math.min(32767, Math.round(n)));
+}
+
 function percentile(arr, p) {
   if (!arr || !arr.length) return null;
   const sorted = [...arr].sort((a, b) => a - b);
@@ -26,6 +32,8 @@ const GAME_KEY_MAP = {
   flappy: 'interruptores',
   water: 'jarra',
 };
+// Valores admitidos por el enum game_key_type de la base de datos.
+const VALID_GAME_KEYS = new Set(['pastillero', 'jarra', 'interruptores', 'fox_runner', 'fox_balloon', 'fox_garden']);
 
 function computeRepFatigue(reps) {
   if (!reps || reps.length < 6) return null;
@@ -48,6 +56,7 @@ function filterReactionTimes(rtStats) {
 
 export function transformGameResult(finalized, sessionId, playOrder, accumulator) {
   const gameKey = GAME_KEY_MAP[finalized.game] || finalized.game;
+  if (!VALID_GAME_KEYS.has(gameKey)) throw new Error(`game_key desconocido: ${finalized.game}`);
   const stats = finalized.repetitionStats;
   const reps = finalized.repetitions || [];
 
@@ -88,10 +97,10 @@ export function transformGameResult(finalized, sessionId, playOrder, accumulator
     session_id: sessionId,
     game_key: gameKey,
     play_order: playOrder,
-    duration_ms: finalized.durationMs,
+    duration_ms: Math.max(0, Math.round(safeNum(finalized.durationMs) ?? 0)),
 
     // A. Pinch & Grasp
-    pinch_count: safeNum(pinchCount),
+    pinch_count: smallint(pinchCount),
     pinch_distance_mean_mm: safeNum(mean(pinchDistances)),
     pinch_distance_max_mm: pinchDistances.length ? safeNum(Math.max(...pinchDistances)) : null,
     tripod_quality_mean: null, // No current game evaluates tripod grasp
@@ -103,7 +112,7 @@ export function transformGameResult(finalized, sessionId, playOrder, accumulator
     hand_open_pct_p90: safeNum(percentile(handOpen, 90)),
     hand_open_pct_p10: safeNum(percentile(handOpen, 10)),
     hand_opening_speed_p75: safeNum(percentile(handOpeningSpeed, 75)),
-    fingers_extended_max: fingersExtended.length ? Math.max(...fingersExtended) : null,
+    fingers_extended_max: fingersExtended.length ? smallint(Math.max(...fingersExtended)) : null,
     fingers_extended_mean: safeNum(mean(fingersExtended)),
     index_extension_p75: safeNum(percentile(indexExt, 75)),
     finger_individuation_mean: safeNum(mean(fingerIndividuations)),
@@ -135,7 +144,7 @@ export function transformGameResult(finalized, sessionId, playOrder, accumulator
     intention_tremor_mean: intentionTremors.length ? safeNum(mean(intentionTremors)) : null,
 
     // G. Inter-repetition Variability
-    rep_count: reps.length || null,
+    rep_count: smallint(reps.length) || null,
     duration_cv: stats?.durationCV ?? null,
     peak_velocity_cv: stats?.peakVelocityCV ?? null,
     mean_velocity_cv: stats?.meanVelocityCV ?? null,

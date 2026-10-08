@@ -28,7 +28,6 @@ export interface GeneratedReport {
   templateId: string;
   language: 'es' | 'en';
   sections: ReportSection[];
-  sizeKb: number;
 }
 
 export interface ScheduledReport {

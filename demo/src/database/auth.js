@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient.js';
+import { clearLocalHealthData } from '../runner/progress.js';
 
 const FAKE_DOMAIN = '@fixedgap.local';
 
@@ -17,6 +18,8 @@ export async function login(username, password) {
 
 export async function logout() {
   await supabase.auth.signOut();
+  // Ordenador de consulta compartido: no dejar rastro de pacientes ni partidas en el navegador.
+  clearLocalHealthData({ includeProgress: true });
 }
 
 export async function getCurrentUser() {
@@ -29,7 +32,7 @@ export async function getOperatorProfile() {
   if (!user) return null;
   const { data } = await supabase
     .from('operators')
-    .select('*')
+    .select('id, username, display_name')
     .eq('id', user.id)
     .single();
   return data;

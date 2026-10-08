@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { useReportStore } from '../../store/reportStore';
 import { Card } from '../../components/Card';
@@ -55,7 +56,7 @@ function GenerarTab() {
     if (templateId) {
       const tpl = templates.find((t) => t.id === templateId);
       if (tpl) {
-        let sections = tpl.sections;
+        const sections = tpl.sections;
         setSelectedSections(sections);
       }
     }
@@ -73,7 +74,6 @@ function GenerarTab() {
       templateId: selectedTemplate || 'custom',
       language,
       sections: selectedSections,
-      sizeKb: Math.floor(Math.random() * 400) + 150,
     };
     addReport(report);
     setGeneratedPreview(report);
@@ -269,6 +269,7 @@ function HistorialTab() {
   const history = useReportStore((s) => s.history);
   const patients = useStore((s) => s.patients);
   const templates = useReportStore((s) => s.templates);
+  const navigate = useNavigate();
 
   return (
     <div className="overflow-x-auto">
@@ -279,7 +280,6 @@ function HistorialTab() {
             <th className="py-3 px-3 text-txt-muted font-medium">Paciente</th>
             <th className="py-3 px-3 text-txt-muted font-medium">Plantilla</th>
             <th className="py-3 px-3 text-txt-muted font-medium">Idioma</th>
-            <th className="py-3 px-3 text-txt-muted font-medium">Tamaño</th>
             <th className="py-3 px-3 text-txt-muted font-medium">Acciones</th>
           </tr>
         </thead>
@@ -300,24 +300,14 @@ function HistorialTab() {
                     {r.language}
                   </span>
                 </td>
-                <td className="py-3 px-3 tabular-nums text-txt-secondary">{r.sizeKb} KB</td>
                 <td className="py-3 px-3">
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => window.alert(`Vista del informe ${r.id}`)}
-                      className="px-3 py-1.5 rounded-lg border-[2.5px] border-clay-border text-xs text-txt-secondary hover:text-accent hover:border-accent/30 transition-colors"
-                    >
-                      Ver
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => window.print()}
-                      className="px-3 py-1.5 rounded-lg border-[2.5px] border-clay-border text-xs text-txt-secondary hover:text-accent hover:border-accent/30 transition-colors"
-                    >
-                      Descargar
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/patient/${r.patientId}/report`)}
+                    className="px-3 py-1.5 rounded-lg border-[2.5px] border-clay-border text-xs text-txt-secondary hover:text-accent hover:border-accent/30 transition-colors"
+                  >
+                    Ver
+                  </button>
                 </td>
               </tr>
             );
@@ -340,6 +330,11 @@ const TABS: { id: Tab; label: string }[] = [
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('generar');
+  const { loaded, load } = useStore();
+
+  useEffect(() => {
+    if (!loaded) load();
+  }, [loaded, load]);
 
   return (
     <div className="space-y-6">

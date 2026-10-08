@@ -1,5 +1,6 @@
 import type { SlingshotMetrics, FlappyMetrics, WaterMetrics, DerivedClinical, GameResult, TremorLevel, VariabilityLevel, EnrichedColumns } from '../data/types';
 import { computeScaleMetricResults } from '../data/clinicalMetrics';
+import { TREMOR_PATHOLOGICAL, SPASTICITY_JERK, FATIGUE_PCT } from './thresholds';
 
 function clamp(v: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, v));
@@ -50,7 +51,7 @@ function computeTremorLevel(sm: SlingshotMetrics | undefined, wm: WaterMetrics |
   }
   const pullTremor = sm?.pullTremor ?? 0;
   const waterJerk = wm?.smoothnessJerk ?? 0;
-  if (pullTremor > 3.5 || waterJerk > 4) return 'pathological';
+  if (pullTremor > TREMOR_PATHOLOGICAL || waterJerk > SPASTICITY_JERK) return 'pathological';
   if (pullTremor > 1.5 || waterJerk > 2) return 'physiological';
   return 'none';
 }
@@ -88,10 +89,10 @@ export function computeDerivedClinical(
 
   const tremorLevel = computeTremorLevel(sm, wm, enrichedSlingshot);
   const tremorFlag = tremorLevel === 'pathological';
-  const spasticityFlag = fm ? fm.smoothnessJerk > 4 : false;
+  const spasticityFlag = fm ? fm.smoothnessJerk > SPASTICITY_JERK : false;
   const fatigueFlag = enrichedFlappy?.fatigueIndex != null
-    ? enrichedFlappy.fatigueIndex < -20
-    : (fm ? fm.fatigueIndex < -20 : false);
+    ? enrichedFlappy.fatigueIndex < FATIGUE_PCT
+    : (fm ? fm.fatigueIndex < FATIGUE_PCT : false);
   const impulseControlFlag = wm ? wm.poisonError > poisonThreshold : false;
   const variabilityLevel = computeVariabilityLevel(fm, enrichedFlappy);
 

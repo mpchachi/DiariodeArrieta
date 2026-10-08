@@ -51,43 +51,38 @@ describe('computeAdherenceDeficit7d', () => {
   });
 });
 
+// DerivedClinical completo con valores neutros; cada test sobreescribe lo que necesita.
+const base: DerivedClinical = {
+  tremorFlag: false, spasticityFlag: false, fatigueFlag: false, impulseControlFlag: false,
+  tremorLevel: 'none', variabilityLevel: 'consistent',
+  proximalGripScore: 50, proximalComponents: { accuracy: 50, pinch: 50, velocity: 50, tremor: 50 },
+  distalFlexExtScore: 50, distalComponents: { flexion: 50, extension: 50, activation: 50, fatigue: 50, smoothness: 50 },
+  pronoSupScore: 50, pronoSupComponents: { supination: 50, pronation: 50, accuracy: 50, errors: 50, smoothness: 50, speed: 50 },
+  globalMotorScore: 50,
+  scaleMetrics: [],
+};
+
 describe('computePriorityScore', () => {
   it('returns 0 for patient with no flags, flat trend, full adherence', () => {
-    const derived: DerivedClinical = {
-      tremorFlag: false, spasticityFlag: false, fatigueFlag: false, impulseControlFlag: false,
-      proximalGripScore: 70, distalFlexExtScore: 70, pronoSupScore: 70, globalMotorScore: 70,
-      scaleMetrics: [],
-    };
+    const derived: DerivedClinical = { ...base, proximalGripScore: 70, distalFlexExtScore: 70, pronoSupScore: 70, globalMotorScore: 70 };
     const score = computePriorityScore(derived, [70, 70, 70, 70, 70], 0);
     expect(score).toBe(0);
   });
 
   it('increases with flags', () => {
-    const derived: DerivedClinical = {
-      tremorFlag: true, spasticityFlag: true, fatigueFlag: false, impulseControlFlag: false,
-      proximalGripScore: 50, distalFlexExtScore: 50, pronoSupScore: 50, globalMotorScore: 50,
-      scaleMetrics: [],
-    };
+    const derived: DerivedClinical = { ...base, tremorFlag: true, spasticityFlag: true };
     const score = computePriorityScore(derived, [50, 50, 50, 50, 50], 0);
     expect(score).toBe(4); // 2 * 2 flags
   });
 
   it('increases with regression', () => {
-    const derived: DerivedClinical = {
-      tremorFlag: false, spasticityFlag: false, fatigueFlag: false, impulseControlFlag: false,
-      proximalGripScore: 50, distalFlexExtScore: 50, pronoSupScore: 50, globalMotorScore: 50,
-      scaleMetrics: [],
-    };
+    const derived: DerivedClinical = { ...base };
     const score = computePriorityScore(derived, [60, 55, 50, 45, 40], 0);
     expect(score).toBeGreaterThan(5); // slope is -5, penalty = 1.5 * 5 = 7.5
   });
 
   it('increases with adherence deficit', () => {
-    const derived: DerivedClinical = {
-      tremorFlag: false, spasticityFlag: false, fatigueFlag: false, impulseControlFlag: false,
-      proximalGripScore: 50, distalFlexExtScore: 50, pronoSupScore: 50, globalMotorScore: 50,
-      scaleMetrics: [],
-    };
+    const derived: DerivedClinical = { ...base };
     const score = computePriorityScore(derived, [50, 50, 50, 50, 50], 0.8);
     expect(score).toBeCloseTo(0.8, 1);
   });

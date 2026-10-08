@@ -1,0 +1,5 @@
+/* Fuentes autohospedadas (Nunito e Inter, variables, subconjunto latin, licencia OFL).
+   Antes se cargaban de fonts.googleapis.com: cada visita enviaba la IP del médico o paciente a Google.
+   Regenerar con: node scripts/fetch-fonts.mjs public/fonts */
+@font-face { font-family: 'Nunito'; font-style: normal; font-weight: 200 1000; font-display: swap; src: url('./nunito.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 100 900; font-display: swap; src: url('./inter.woff2') format('woff2'); }

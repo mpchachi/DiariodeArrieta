@@ -42,3 +42,9 @@ dist-vercel/
 .vercel/
 .vercel
 .env*
+
+# Capturas y resultados de los tests de UI (pueden contener datos de pacientes)
+demo/.shots/
+test-results/
+playwright-report/
+*.tsbuildinfo

@@ -1,10 +1,12 @@
+import { today } from '../domain/clock';
+
 interface AdherenceHeatmapProps {
   logs: { date: string; completed: boolean }[];
   days?: number;
 }
 
 export function AdherenceHeatmap({ logs, days = 7 }: AdherenceHeatmapProps) {
-  const now = new Date('2026-05-28');
+  const now = today();
   const cells: ('done' | 'missed' | 'none')[] = [];
 
   for (let i = days - 1; i >= 0; i--) {

@@ -9,7 +9,7 @@
 // No toca demo/public/dashboard (el desarrollo local sigue en «/»).
 
 import { execSync } from 'node:child_process';
-import { cpSync, rmSync, existsSync, mkdtempSync, readdirSync, statSync } from 'node:fs';
+import { cpSync, rmSync, existsSync, mkdtempSync, readdirSync, statSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,7 +37,15 @@ const dist = join(demo, 'dist');
 rmSync(join(dist, 'dashboard'), { recursive: true, force: true });
 cpSync(dash, join(dist, 'dashboard'), { recursive: true });
 // MediaPipe solo carga las variantes «internal» y «nosimd»; la de módulo (11 MB) sobra.
-for (const f of ['vision_wasm_module_internal.js', 'vision_wasm_module_internal.wasm']) rmSync(join(dist, 'pinch-assets/wasm', f), { force: true });
+const dropped = ['vision_wasm_module_internal.js', 'vision_wasm_module_internal.wasm'];
+for (const f of dropped) rmSync(join(dist, 'pinch-assets/wasm', f), { force: true });
+// El manifiesto de hashes tiene que describir lo que de verdad se publica.
+const manifestPath = join(dist, 'pinch-assets', 'manifest.json');
+if (existsSync(manifestPath)) {
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  for (const f of dropped) delete manifest.sha256?.[`wasm/${f}`];
+  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+}
 
 // 3. Copia al destino.
 const target = vercel ? join(demo, 'dist-vercel', 'plataforma') : join(web, 'public', 'plataforma');

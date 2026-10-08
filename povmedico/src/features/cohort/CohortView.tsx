@@ -9,11 +9,13 @@ import { BodyIcon } from '../../components/BodyIcon';
 import { CohortFilters } from './CohortFilters';
 import { colors } from '../../design/tokens';
 import type { Session, Patient, ScaleMetricResult, SlingshotMetrics, FlappyMetrics, WaterMetrics } from '../../data/types';
+import { FLAG_LABELS, TREMOR_PATHOLOGICAL, SPASTICITY_JERK, FATIGUE_PCT } from '../../domain/thresholds';
+import { MOBILITY_LABELS } from '../../domain/labels';
 
 type ViewMode = 'cards' | 'table';
 
 export function CohortView() {
-  const { loaded, load, sessions, getFilteredPatients } = useStore();
+  const { loaded, load, error, sessions, getFilteredPatients } = useStore();
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -31,6 +33,8 @@ export function CohortView() {
       </div>
     );
   }
+
+  if (error) return <div className="p-8 text-alert">Error cargando datos: {error}</div>;
 
   const patients = getFilteredPatients();
   const alertCount = patients.filter(p => p.lastSession && (
@@ -147,15 +151,18 @@ export function CohortView() {
                     return (
                       <tr
                         key={p.id}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => navigate(`/patient/${p.id}`)}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/patient/${p.id}`); } }}
                         className={`cursor-pointer transition-colors hover:bg-clay-surface-hover ${i < restPatients.length - 1 ? 'border-b-2 border-clay-border/40' : ''}`}
                       >
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
-                            <BodyIcon side={p.affectedSide} size={16} />
+                            {p.affectedSide && <BodyIcon side={p.affectedSide} size={16} />}
                             <span className="font-semibold text-txt">{p.pseudonym}</span>
                             <MobilityTag mobility={p.mobility} />
-                            <span className="text-[10px] text-txt-muted">{p.age} a</span>
+                            <span className="text-[10px] text-txt-muted">{p.age !== null ? `${p.age} a` : '—'}</span>
                           </div>
                         </td>
                         <td className="py-3 px-3 text-center">
@@ -229,10 +236,10 @@ function PatientCard({ patient: p, sessions, expanded, onToggle, onNavigate, var
   const delta7d = computeDelta7d(patientSessions);
 
   const activeFlags = lastSession ? [
-    lastSession.derived.tremorFlag && 'Temblor',
-    lastSession.derived.spasticityFlag && 'Espasticidad',
-    lastSession.derived.fatigueFlag && 'Fatiga',
-    lastSession.derived.impulseControlFlag && 'Desinhibición',
+    lastSession.derived.tremorFlag && FLAG_LABELS.tremorFlag,
+    lastSession.derived.spasticityFlag && FLAG_LABELS.spasticityFlag,
+    lastSession.derived.fatigueFlag && FLAG_LABELS.fatigueFlag,
+    lastSession.derived.impulseControlFlag && FLAG_LABELS.impulseControlFlag,
   ].filter(Boolean) as string[] : [];
 
   const isSpotlight = variant === 'spotlight';
@@ -240,7 +247,10 @@ function PatientCard({ patient: p, sessions, expanded, onToggle, onNavigate, var
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       onClick={onNavigate}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate(); } }}
       className={`bg-clay-surface-solid rounded-2xl border-[2.5px] cursor-pointer transition-all duration-200 active:scale-[0.98] ${
         isSpotlight
           ? 'border-alert/30 hover:shadow-clay-hover hover:-translate-y-1'
@@ -255,7 +265,7 @@ function PatientCard({ patient: p, sessions, expanded, onToggle, onNavigate, var
           <div className="flex items-center gap-2">
             <span className={`font-display font-bold text-txt ${isSpotlight ? 'text-[15px]' : 'text-[14px]'}`}>{p.pseudonym}</span>
             <MobilityTag mobility={p.mobility} />
-            <BodyIcon side={p.affectedSide} size={isSpotlight ? 18 : 16} />
+            {p.affectedSide && <BodyIcon side={p.affectedSide} size={isSpotlight ? 18 : 16} />}
           </div>
           {activeFlags.length > 0 && (
             <div className="flex gap-1 mt-1.5">
@@ -322,7 +332,7 @@ function PatientCard({ patient: p, sessions, expanded, onToggle, onNavigate, var
 
             {/* Info row */}
             <div className="text-[11px] text-txt-muted font-medium pt-2 space-y-1">
-              <div>{p.age} a · {p.strokeType ? `${p.strokeType === 'ischemic' ? 'Isquémico' : 'Hemorrágico'} · ` : ''}Prioridad {p.priorityScore.toFixed(1)}</div>
+              <div>{p.age !== null ? `${p.age} a` : 'Edad no consta'} · {p.strokeType ? `${p.strokeType === 'ischemic' ? 'Isquémico' : 'Hemorrágico'} · ` : ''}Prioridad {p.priorityScore.toFixed(1)}</div>
               <div>Puntuación global = media de agarre, coordinación y rotación. Prioridad = alertas, deterioro reciente y adherencia.</div>
             </div>
           </div>
@@ -379,11 +389,11 @@ function getTrendColor(scores: number[]): string {
   return colors.warning;
 }
 
-function MobilityTag({ mobility }: { mobility: string }) {
-  const labels: Record<string, string> = { agile: 'Ágil', moderate: 'Moderado', reduced: 'Reducido' };
+function MobilityTag({ mobility }: { mobility: string | null }) {
+  if (!mobility) return null;
   return (
     <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-clay-surface-elevated border-2 border-clay-border text-txt-muted uppercase tracking-wider font-bold font-display shadow-clay-inset">
-      {labels[mobility] ?? mobility}
+      {MOBILITY_LABELS[mobility] ?? mobility}
     </span>
   );
 }
@@ -476,7 +486,7 @@ function ScaleMetricPreview({ metrics }: { metrics: ScaleMetricResult[] }) {
 
   return (
     <div className="bg-clay-surface-elevated rounded-lg border border-clay-border px-2.5 py-2">
-      <div className="text-[9px] text-txt-muted font-semibold uppercase tracking-wider mb-1.5">Métricas Excel / escalas</div>
+      <div className="text-[9px] text-txt-muted font-semibold uppercase tracking-wider mb-1.5">Métricas de escalas</div>
       <div className="grid grid-cols-2 gap-1.5">
         {previewMetrics.map(metric => (
           <div key={metric.id} className="min-w-0">
@@ -499,22 +509,22 @@ function getClinicalEvidence(session: Session): { label: string; active: boolean
 
   return [
     {
-      label: 'Temblor',
+      label: FLAG_LABELS.tremorFlag,
       active: session.derived.tremorFlag,
-      evidence: `oscilación de agarre ${formatMetric(slingshot?.pullTremor)} y suavidad de rotación ${formatMetric(water?.smoothnessJerk)}; umbral clínico >3.`,
+      evidence: `oscilación de agarre ${formatMetric(slingshot?.pullTremor)} y suavidad de rotación ${formatMetric(water?.smoothnessJerk)}; umbral >${TREMOR_PATHOLOGICAL} / >${SPASTICITY_JERK}.`,
     },
     {
-      label: 'Espasticidad',
+      label: FLAG_LABELS.spasticityFlag,
       active: session.derived.spasticityFlag,
-      evidence: `jerk de flexo-extensión ${formatMetric(flappy?.smoothnessJerk)}; umbral >3.`,
+      evidence: `jerk de flexo-extensión ${formatMetric(flappy?.smoothnessJerk)}; umbral >${SPASTICITY_JERK}.`,
     },
     {
-      label: 'Fatiga',
+      label: FLAG_LABELS.fatigueFlag,
       active: session.derived.fatigueFlag,
-      evidence: `índice de fatiga ${formatMetric(flappy?.fatigueIndex)}; alerta si cae por debajo de -15%.`,
+      evidence: `índice de fatiga ${formatMetric(flappy?.fatigueIndex)}; alerta si cae por debajo de ${FATIGUE_PCT}%.`,
     },
     {
-      label: 'Control motor',
+      label: FLAG_LABELS.impulseControlFlag,
       active: session.derived.impulseControlFlag,
       evidence: `error de vertido ${formatMetric(water?.poisonError)}%; umbral >25%.`,
     },

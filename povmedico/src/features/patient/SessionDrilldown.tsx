@@ -9,13 +9,20 @@ interface Props {
   sessionId: string;
 }
 
+// Formatea un número o devuelve 's/d' si la métrica no consta.
+function fmt(v?: number, d = 2): string {
+  return typeof v === 'number' && Number.isFinite(v) ? v.toFixed(d) : 's/d';
+}
+
 export function SessionDrilldown({ sessionId }: Props) {
   const [session, setSession] = useState<Session | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getSession(sessionId).then(s => setSession(s ?? null));
+    getSession(sessionId).then(s => setSession(s ?? null)).catch(e => setError(e.message));
   }, [sessionId]);
 
+  if (error) return <Card className="mt-4 text-alert text-sm">Error cargando la sesión: {error}</Card>;
   if (!session) return null;
 
   const hasFrames = session.games.some(g => g.frames && g.frames.length > 0);
@@ -123,7 +130,7 @@ function ScaleMetricSummary({ metrics }: { metrics: ScaleMetricResult[] }) {
           <MetricRow
             key={metric.id}
             label={`${metric.technicalId} · ${metric.label}`}
-            value={metric.value.toFixed(1)}
+            value={fmt(metric.value, 1)}
             unit={metric.unit}
           />
         ))}
@@ -135,11 +142,11 @@ function ScaleMetricSummary({ metrics }: { metrics: ScaleMetricResult[] }) {
 function SlingshotSummary({ metrics }: { metrics: SlingshotMetrics }) {
   return (
     <>
-      <MetricRow label="Precisión de pinza (M1)" value={(metrics.accuracyRatio * 100).toFixed(0)} unit="%" />
-      <MetricRow label="Apertura pulgar-índice" value={metrics.maxPinchOpen.toFixed(2)} />
-      <MetricRow label="Velocidad de alcance" value={metrics.maxPullDistance.toFixed(0)} unit="px/s" />
-      <MetricRow label="Índice de temblor" value={metrics.pullTremor.toFixed(2)} />
-      <MetricRow label="Repeticiones" value={metrics.totalShots} />
+      <MetricRow label="Precisión de pinza (M1)" value={fmt(metrics.accuracyRatio * 100, 0)} unit="%" />
+      <MetricRow label="Apertura pulgar-índice" value={fmt(metrics.maxPinchOpen)} />
+      <MetricRow label="Velocidad de alcance" value={fmt(metrics.maxPullDistance, 0)} unit="px/s" />
+      <MetricRow label="Índice de temblor" value={fmt(metrics.pullTremor)} />
+      <MetricRow label="Repeticiones" value={metrics.totalShots ?? 's/d'} />
     </>
   );
 }
@@ -147,11 +154,11 @@ function SlingshotSummary({ metrics }: { metrics: SlingshotMetrics }) {
 function FlappySummary({ metrics }: { metrics: FlappyMetrics }) {
   return (
     <>
-      <MetricRow label="Extensión del índice" value={(metrics.maxExtension * 100).toFixed(0)} unit="%" />
-      <MetricRow label="Flexión máxima" value={(metrics.maxFlexion * 100).toFixed(0)} unit="%" />
-      <MetricRow label="Activaciones de apertura" value={metrics.activationCount} />
-      <MetricRow label="Fatiga motora" value={metrics.fatigueIndex.toFixed(1)} unit="%" />
-      <MetricRow label="Fragmentación (jerk)" value={metrics.smoothnessJerk.toFixed(2)} />
+      <MetricRow label="Extensión del índice" value={fmt(metrics.maxExtension * 100, 0)} unit="%" />
+      <MetricRow label="Flexión máxima" value={fmt(metrics.maxFlexion * 100, 0)} unit="%" />
+      <MetricRow label="Activaciones de apertura" value={metrics.activationCount ?? 's/d'} />
+      <MetricRow label="Fatiga motora" value={fmt(metrics.fatigueIndex, 1)} unit="%" />
+      <MetricRow label="Fragmentación (jerk)" value={fmt(metrics.smoothnessJerk)} />
     </>
   );
 }
@@ -159,11 +166,11 @@ function FlappySummary({ metrics }: { metrics: FlappyMetrics }) {
 function WaterSummary({ metrics }: { metrics: WaterMetrics }) {
   return (
     <>
-      <MetricRow label="Supinación (est.)" value={metrics.maxSupination.toFixed(0)} unit="°" />
-      <MetricRow label="Pronación (est.)" value={metrics.maxPronation.toFixed(0)} unit="°" />
-      <MetricRow label="Rango de rotación (M4)" value={(((metrics.maxSupination + metrics.maxPronation) / 180) * 100).toFixed(0)} unit="/100" />
-      <MetricRow label="Tiempo medio vertido" value={(metrics.averagePouringTime / 1000).toFixed(1)} unit="s" />
-      <MetricRow label="Precisión de vertido" value={metrics.waterAccuracy.toFixed(0)} unit="%" />
+      <MetricRow label="Supinación (est.)" value={fmt(metrics.maxSupination, 0)} unit="°" />
+      <MetricRow label="Pronación (est.)" value={fmt(metrics.maxPronation, 0)} unit="°" />
+      <MetricRow label="Rango de rotación (M4)" value={fmt(((metrics.maxSupination + metrics.maxPronation) / 180) * 100, 0)} unit="/100" />
+      <MetricRow label="Tiempo medio vertido" value={fmt(metrics.averagePouringTime / 1000, 1)} unit="s" />
+      <MetricRow label="Precisión de vertido" value={fmt(metrics.waterAccuracy, 0)} unit="%" />
     </>
   );
 }

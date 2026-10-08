@@ -15,23 +15,24 @@ export function CohortFilters() {
         <input
           type="text"
           placeholder="Buscar paciente..."
+          aria-label="Buscar paciente"
           value={filters.search}
           onChange={e => setFilter('search', e.target.value)}
           className="pl-10 pr-3 py-2 rounded-xl border-[2px] border-clay-border bg-clay-surface-elevated text-[13px] text-txt font-medium placeholder:text-txt-muted focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 transition-all w-52 shadow-clay-inset"
         />
       </div>
-      <select value={filters.mobility ?? ''} onChange={e => setFilter('mobility', e.target.value || null)} className={selectClasses}>
+      <select aria-label="Filtrar por movilidad" value={filters.mobility ?? ''} onChange={e => setFilter('mobility', e.target.value || null)} className={selectClasses}>
         <option value="">Toda la movilidad</option>
         <option value="agile">Ágil</option>
         <option value="moderate">Moderado</option>
         <option value="reduced">Reducido</option>
       </select>
-      <select value={filters.affectedSide ?? ''} onChange={e => setFilter('affectedSide', e.target.value || null)} className={selectClasses}>
+      <select aria-label="Filtrar por lado afecto" value={filters.affectedSide ?? ''} onChange={e => setFilter('affectedSide', e.target.value || null)} className={selectClasses}>
         <option value="">Ambos lados</option>
         <option value="left">Izquierdo</option>
         <option value="right">Derecho</option>
       </select>
-      <select value={filters.strokeType ?? ''} onChange={e => setFilter('strokeType', e.target.value || null)} className={selectClasses}>
+      <select aria-label="Filtrar por tipo de ictus" value={filters.strokeType ?? ''} onChange={e => setFilter('strokeType', e.target.value || null)} className={selectClasses}>
         <option value="">Tipo de ictus</option>
         <option value="ischemic">Isquémico</option>
         <option value="hemorrhagic">Hemorrágico</option>
@@ -44,7 +45,7 @@ export function CohortFilters() {
             </svg>
           )}
         </div>
-        <input type="checkbox" checked={filters.onlyAlerts} onChange={e => setFilter('onlyAlerts', e.target.checked)} className="sr-only" />
+        <input type="checkbox" aria-label="Solo pacientes con alertas" checked={filters.onlyAlerts} onChange={e => setFilter('onlyAlerts', e.target.checked)} className="sr-only" />
         Solo alertas
       </label>
       {hasActiveFilters && (

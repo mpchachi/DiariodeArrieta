@@ -77,14 +77,14 @@ export function TimeSeriesPanel({ sessions, patient }: Props) {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-bold" style={{ color: domainInfo.color }}>{domainInfo.title}</h2>
-          <p className="text-xs text-clay-text-muted">Métricas Excel · Juego: {domainInfo.game}</p>
+          <p className="text-xs text-clay-text-muted">Métricas de escalas · Juego: {domainInfo.game}</p>
         </div>
         <div className="flex gap-1">
           {(Object.keys(domainLabels) as Domain[]).map(d => (
             <button
               key={d}
               onClick={() => { setActiveDomain(d); setSelectedMetric(metricsByDomain[d][0].key); }}
-              className={`px-3 py-1 rounded-clay-sm text-xs font-medium transition-colors ${activeDomain === d ? 'text-white' : 'text-clay-text-secondary hover:bg-clay-border/30'}`}
+              className={`px-3 py-1 rounded-sm text-xs font-medium transition-colors ${activeDomain === d ? 'text-white' : 'text-clay-text-secondary hover:bg-clay-border/30'}`}
               style={activeDomain === d ? { backgroundColor: domainLabels[d].color } : undefined}
             >
               {domainLabels[d].title.split(' ')[0]}
@@ -98,7 +98,7 @@ export function TimeSeriesPanel({ sessions, patient }: Props) {
           <button
             key={m.key}
             onClick={() => setSelectedMetric(m.key)}
-            className={`px-2 py-1 rounded-clay-sm text-xs transition-colors ${selectedMetric === m.key ? 'bg-clay-text text-white' : 'bg-clay-border/30 text-clay-text-secondary hover:bg-clay-border/60'}`}
+            className={`px-2 py-1 rounded-sm text-xs transition-colors ${selectedMetric === m.key ? 'bg-clay-text text-white' : 'bg-clay-border/30 text-clay-text-secondary hover:bg-clay-border/60'}`}
           >
             {m.label}
           </button>

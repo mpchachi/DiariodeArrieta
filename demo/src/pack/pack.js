@@ -190,16 +190,21 @@ export function startFoxJourney(container, { subjectId = null, onExit = null, on
       </div>`);
     camera.dispose();
     const saveEl = root.querySelector('[data-role="save"]'), retryBtn = root.querySelector('[data-action="retry"]');
-    let saving = null, saved = false;
+    let saving = null, saved = false, sessionId = null;
     const save = () => {
       if (!subjectId || saved || saving) return saving;
       saveEl.textContent = 'Guardando resultados…'; saveEl.className = 'pack-save'; if (retryBtn) retryBtn.hidden = true;
-      saving = Promise.resolve(saveJourney({ subjectId, startedAt, hand, results }))
+      // El reintento reutiliza el mismo id de sesión: nunca se duplica una sesión por pulsar «Reintentar».
+      saving = Promise.resolve(saveJourney({ subjectId, startedAt, hand, results, sessionId }))
         .catch(e => ({ ok: false, error: String(e?.message ?? e) }))
         .then(res => {
           saving = null;
+          if (res?.sessionId) sessionId = res.sessionId;
           if (res?.ok) { saved = true; saveEl.textContent = '✓ Resultados guardados en la ficha del paciente.'; saveEl.className = 'pack-save is-ok'; }
-          else { saveEl.textContent = `No se han podido guardar los resultados: ${res?.error ?? 'error desconocido'}`; saveEl.className = 'pack-save is-error'; if (retryBtn) retryBtn.hidden = false; }
+          else {
+            console.error('[pack] guardado fallido:', res?.error);
+            saveEl.textContent = 'No se han podido guardar los resultados. Comprueba la conexión y reintenta.'; saveEl.className = 'pack-save is-error'; if (retryBtn) retryBtn.hidden = false;
+          }
           return res;
         });
       return saving;

@@ -120,7 +120,7 @@ export interface Session {
   id: string;
   patientId: string;
   date: string;
-  handUsed: Hand;
+  handUsed: Hand | null; // null = no consta
   games: GameResult[];
   derived: DerivedClinical;
 }
@@ -146,12 +146,13 @@ export interface EventMarker {
 export interface Patient {
   id: string;
   pseudonym: string;
-  age: number;
-  sex: 'M' | 'F' | 'other';
-  strokeType: StrokeType | null; // null = no consta (el alta ya no lo pide)
-  strokeDate: string;
-  affectedSide: AffectedSide;
-  mobility: MobilityLevel;
+  // null = no consta. No se inventan datos clínicos.
+  age: number | null;
+  sex: 'M' | 'F' | 'other' | null;
+  strokeType: StrokeType | null;
+  strokeDate: string | null;
+  affectedSide: AffectedSide | null;
+  mobility: MobilityLevel | null;
   clinicianIds: string[];
   baselineSessionId: string;
   prescribedExercises: PrescribedExercise[];
@@ -161,7 +162,7 @@ export interface Patient {
 export interface Clinician {
   id: string;
   name: string;
-  role: 'physician' | 'physiotherapist' | 'occupational-therapist';
+  role?: 'physician' | 'physiotherapist' | 'occupational-therapist';
 }
 
 export interface PatientPrediction {

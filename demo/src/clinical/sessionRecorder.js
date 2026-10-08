@@ -1,18 +1,11 @@
-// Aggregates the three games of one playthrough into a single dashboard
-// "session" and appends it to Alpha's history in localStorage.
-// Also uploads to Supabase when connected and a subject is selected.
+// Agrega los tres juegos de una pasada (Pastillero, Jarra, Interruptores) en una «sesión»
+// y la sube a Supabase cuando hay un sujeto seleccionado.
 //
-// Storage key: 'fixedgap_alpha_sessions'
-// Value: JSON array of session objects (grows one entry per playthrough).
-//
-// The stored session matches the shape the dashboard builds internally:
-//   { id, patientId, date, handUsed, games:[...3 finalized game metrics...] }
-// The dashboard computes `derived` itself from `games` on load.
+// No se guarda nada en localStorage: las métricas son datos de salud y el ordenador de la
+// consulta puede ser compartido. El resultado solo vive en memoria mientras dura la pasada.
 
 import { uploadPlaythrough } from '../database/uploadSession.js';
 
-const STORAGE_KEY = 'fixedgap_alpha_sessions';
-const BASELINE_KEY = 'fixedgap_alpha_baseline';
 export const ALPHA_PATIENT_ID = 'pat-alpha';
 
 // Order the dashboard expects inside a session: slingshot, flappy, water.
@@ -44,25 +37,9 @@ export function recordGame(finalizedGame, accumulator = null) {
   }
 }
 
-function loadHistory() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
-}
-
-// C3: Patient baseline — tracks historical maxima for intra-patient normalization.
-// Stored separately so it persists even if sessions are cleared.
-function loadBaseline() {
-  try {
-    const raw = localStorage.getItem(BASELINE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch { return {}; }
-}
+// Máximos de la pasada actual (normalización intra-paciente). Solo en memoria.
+let baseline = {};
+function loadBaseline() { return baseline; }
 
 function updateBaseline(games) {
   const baseline = loadBaseline();
@@ -89,10 +66,6 @@ function updateBaseline(games) {
     }
   }
 
-  try {
-    localStorage.setItem(BASELINE_KEY, JSON.stringify(baseline));
-  } catch { /* best effort */ }
-
   return baseline;
 }
 
@@ -100,8 +73,7 @@ export function getPatientBaseline() {
   return loadBaseline();
 }
 
-// Commits the accumulated games as a new session appended to Alpha's history.
-// Also uploads to Supabase if a subject is selected.
+// Cierra la pasada: construye la sesión y la sube a Supabase si hay sujeto.
 export async function commitPlaythrough(handUsed = 'right') {
   if (currentGames.length === 0) return { session: null, uploadResult: null };
 
@@ -111,26 +83,16 @@ export async function commitPlaythrough(handUsed = 'right') {
 
   // C3: Update patient baseline with this session's maxima
   const baseline = updateBaseline(games);
-
-  const history = loadHistory();
-  const idx = history.length;
   const now = new Date();
 
   const session = {
-    id: `sess-${ALPHA_PATIENT_ID}-${String(idx).padStart(3, '0')}`,
+    id: `sess-${now.getTime()}`,
     patientId: ALPHA_PATIENT_ID,
     date: now.toISOString().slice(0, 10),
     handUsed,
     games,
     baseline,
   };
-
-  history.push(session);
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-  } catch (e) {
-    console.warn('[sessionRecorder] could not persist', e);
-  }
 
   let uploadResult = null;
 

@@ -5,19 +5,25 @@ import type { Patient, Session, PrescribedExercise } from '../../data/types';
 import { getPatient, getSessions } from '../../data/api';
 import { Card } from '../../components/Card';
 import { CorrelationDisclaimer } from '../../components/Disclaimer';
+import { DOMAIN_LABELS, INTENSITY_LABELS } from '../../domain/labels';
 
 export function RehabCorrelation() {
   const { id } = useParams<{ id: string }>();
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [sessions, setSessions] = useState<Session[]>([]);
+  // undefined = cargando, null = no encontrado
+  const [patient, setPatient] = useState<Patient | null | undefined>(undefined);
+  const [sessions, setSessions] = useState<Session[] | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
-    getPatient(id).then(p => setPatient(p ?? null));
-    getSessions(id).then(s => setSessions(s.sort((a, b) => a.date.localeCompare(b.date))));
+    getPatient(id).then(p => setPatient(p ?? null)).catch(e => { setError(e.message); setPatient(null); });
+    getSessions(id).then(s => setSessions(s.sort((a, b) => a.date.localeCompare(b.date)))).catch(e => setError(e.message));
   }, [id]);
 
-  if (!patient || sessions.length === 0) return <div className="text-clay-text-muted p-8">Cargando...</div>;
+  if (error) return <div className="p-8 text-alert">Error cargando datos: {error}</div>;
+  if (patient === undefined || sessions === undefined) return <div className="text-clay-text-muted p-8">Cargando...</div>;
+  if (patient === null) return <div className="p-8 text-txt-secondary">Paciente no encontrado. <Link to="/" className="text-accent">Volver al triaje</Link></div>;
+  if (sessions.length === 0) return <div className="p-8 text-txt-secondary">Sin sesiones todavía. <Link to={`/patient/${id}`} className="text-accent">Volver al paciente</Link></div>;
 
   const domainScoreKey: Record<string, keyof Session['derived']> = {
     'proximal-grip': 'proximalGripScore',
@@ -97,7 +103,7 @@ export function RehabCorrelation() {
 
             return (
               <div key={event.id} className="flex items-center gap-4 py-3 border-b border-clay-border/50 last:border-0">
-                <div className="w-2 h-2 rounded-full bg-clay-warning" />
+                <div className="w-2 h-2 rounded-full bg-warning" />
                 <div className="flex-1">
                   <div className="text-sm font-medium text-clay-text">{event.label}</div>
                   <div className="text-xs text-clay-text-muted">{event.date}</div>
@@ -107,7 +113,7 @@ export function RehabCorrelation() {
                   <div className="flex items-center gap-2 tabular-nums text-sm">
                     <span>{avgBefore.toFixed(1)}</span>
                     <span>→</span>
-                    <span className={delta >= 0 ? 'text-clay-ok font-semibold' : 'text-clay-alert font-semibold'}>
+                    <span className={delta >= 0 ? 'text-ok font-semibold' : 'text-alert font-semibold'}>
                       {avgAfter.toFixed(1)} ({delta >= 0 ? '+' : ''}{delta.toFixed(1)})
                     </span>
                   </div>
@@ -149,7 +155,7 @@ function ExerciseCorrelation({
         <div>
           <h3 className="text-sm font-bold text-clay-text">{exercise.name}</h3>
           <p className="text-xs text-clay-text-muted">
-            {exercise.targetDomain} · {exercise.intensity} · {exercise.frequencyPerWeek}x/sem · desde {exercise.startDate}
+            {DOMAIN_LABELS[exercise.targetDomain]} · {INTENSITY_LABELS[exercise.intensity]} · {exercise.frequencyPerWeek}x/sem · desde {exercise.startDate}
           </p>
         </div>
       </div>

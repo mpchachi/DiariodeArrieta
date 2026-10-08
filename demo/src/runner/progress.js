@@ -1,11 +1,13 @@
-// Progreso del bosque por sujeto (estación) y registro local de partidas.
-// Local (localStorage) mientras no exista el tipo de juego en Supabase.
+// Progreso del bosque por sujeto (estación). Es lo único que se guarda en el navegador:
+// las métricas de cada partida van a Supabase (uploadJourney) y no se copian a localStorage,
+// porque son datos de salud y el ordenador de la consulta puede ser compartido.
 
 import { RUNNER_CONFIG as C } from './config.js';
 
 const PROGRESS_KEY = 'fixedgap_runner_progress';
-const SESSIONS_KEY = 'fixedgap_runner_sessions';
-const MAX_STORED = 30;
+// Claves de versiones anteriores que guardaban partidas completas; se limpian al arrancar y al salir.
+export const LEGACY_LOCAL_KEYS = ['fixedgap_runner_sessions', 'fixedgap_flappy_sessions', 'fixedgap_garden_sessions',
+  'fixedgap_fishing_sessions', 'fixedgap_alpha_sessions', 'fixedgap_alpha_baseline'];
 
 const read = (key, fallback) => {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
@@ -13,6 +15,14 @@ const read = (key, fallback) => {
 const write = (key, value) => {
   try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; }
 };
+
+export function clearLocalHealthData({ includeProgress = false } = {}) {
+  try {
+    for (const k of LEGACY_LOCAL_KEYS) localStorage.removeItem(k);
+    if (includeProgress) localStorage.removeItem(PROGRESS_KEY);
+  } catch { /* sin almacenamiento */ }
+}
+clearLocalHealthData();
 
 export function getSeason(subjectId) {
   const forced = new URLSearchParams(location.search).get('estacion');
@@ -29,10 +39,8 @@ export function advanceSeason(subjectId) {
   return Math.min(C.maxSeasons - 1, all[key]);
 }
 
-// Guarda el resumen (sin muestras) para consulta rápida.
-export function storeSession(result, key = SESSIONS_KEY) {
-  const { samples, frames, landmarkFrames, config, ...light } = result;
-  const list = read(key, []);
-  list.push(light);
-  return write(key, list.slice(-MAX_STORED));
+// Antes guardaba un resumen de la partida en localStorage. Se mantiene la firma para los juegos,
+// pero ya no persiste nada (ver cabecera).
+export function storeSession(_result, _key) {
+  return false;
 }

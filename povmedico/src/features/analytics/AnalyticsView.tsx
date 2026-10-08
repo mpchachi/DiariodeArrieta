@@ -10,11 +10,14 @@ import { chartTheme, colors } from '../../design/tokens';
 export function AnalyticsView() {
   const { patients, sessions, loaded, load } = useStore();
   const [stats, setStats] = useState<Awaited<ReturnType<typeof getCohorteStats>> | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loaded) load();
-    getCohorteStats().then(setStats);
+    getCohorteStats().then(setStats).catch(e => setError(e.message));
   }, [loaded, load]);
+
+  if (error) return <div className="p-8 text-alert">Error cargando datos: {error}</div>;
 
   if (!stats) {
     return (
@@ -143,34 +146,42 @@ export function PatientCohortComparison() {
   const { id } = useParams<{ id: string }>();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const { patients, sessions: allSessions } = useStore();
+  const [error, setError] = useState<string | null>(null);
+  const { patients, sessions: allSessions, loaded, load } = useStore();
+
+  useEffect(() => {
+    if (!loaded) load();
+  }, [loaded, load]);
 
   useEffect(() => {
     if (!id) return;
-    getPatient(id).then(p => setPatient(p ?? null));
-    getSessions(id).then(s => setSessions(s.sort((a, b) => a.date.localeCompare(b.date))));
+    getPatient(id).then(p => setPatient(p ?? null)).catch(e => setError(e.message));
+    getSessions(id).then(s => setSessions(s.sort((a, b) => a.date.localeCompare(b.date)))).catch(e => setError(e.message));
   }, [id]);
 
+  if (error) return <Card className="mt-6 text-alert text-sm">Error cargando la cohorte: {error}</Card>;
   if (!patient || sessions.length === 0) return null;
 
   const lastSession = sessions[sessions.length - 1];
+  // Emparejamiento solo con datos que constan.
   const matchedPatients = patients.filter(p =>
     p.id !== patient.id &&
     p.mobility === patient.mobility &&
-    Math.abs(p.age - patient.age) <= 10 &&
+    (patient.age === null || p.age === null || Math.abs(p.age - patient.age) <= 10) &&
     p.strokeType === patient.strokeType
   );
 
-  const cohortScores = matchedPatients.map(p => {
-    const pSessions = allSessions.filter(s => s.patientId === p.id);
+  // Sin última sesión no hay puntuación: no se rellena con 50.
+  const cohortScores = matchedPatients.flatMap(p => {
+    const pSessions = allSessions.filter(s => s.patientId === p.id).sort((a, b) => a.date.localeCompare(b.date));
     const last = pSessions[pSessions.length - 1];
-    return last?.derived.globalMotorScore ?? 50;
+    return last ? [last.derived.globalMotorScore] : [];
   }).sort((a, b) => a - b);
 
   const patientScore = lastSession.derived.globalMotorScore;
-  const percentile = cohortScores.length > 0
+  const percentile = cohortScores.length >= 3
     ? Math.round((cohortScores.filter(s => s <= patientScore).length / cohortScores.length) * 100)
-    : 50;
+    : null;
 
   return (
     <Card className="mt-6 animate-fadeInUp">
@@ -182,13 +193,16 @@ export function PatientCohortComparison() {
         </Link>
       </div>
       <p className="text-[11px] text-txt-muted mb-3">
-        Comparado con {matchedPatients.length} pacientes (movilidad {{ agile: 'ágil', moderate: 'moderada', reduced: 'reducida' }[patient.mobility]}, ±10 años{patient.strokeType ? `, ${patient.strokeType === 'ischemic' ? 'isquémico' : 'hemorrágico'}` : ''})
+        Comparado con {cohortScores.length} pacientes (movilidad {patient.mobility ? { agile: 'ágil', moderate: 'moderada', reduced: 'reducida' }[patient.mobility] : 'no consta'}, ±10 años{patient.strokeType ? `, ${patient.strokeType === 'ischemic' ? 'isquémico' : 'hemorrágico'}` : ''})
       </p>
+      {percentile === null ? (
+        <p className="text-sm text-txt-secondary">Datos insuficientes: hacen falta al menos 3 pacientes comparables.</p>
+      ) : (
       <div className="flex items-center gap-4">
         <div className="flex-1">
           <div className="h-3 bg-clay-surface-elevated rounded-md overflow-hidden relative border border-clay-border">
             <div className="h-full bg-gradient-to-r from-accent/40 to-accent/60 rounded-md transition-all duration-700" style={{ width: `${percentile}%` }} />
-            <div className="absolute top-0 h-full w-0.5 bg-accent shadow-card" style={{ left: `${percentile}%` }} />
+            <div className="absolute top-0 h-full w-0.5 bg-accent shadow-clay" style={{ left: `${percentile}%` }} />
           </div>
         </div>
         <div className="text-right">
@@ -196,6 +210,7 @@ export function PatientCohortComparison() {
           <div className="text-[10px] text-txt-muted uppercase tracking-wider">percentil</div>
         </div>
       </div>
+      )}
     </Card>
   );
 }

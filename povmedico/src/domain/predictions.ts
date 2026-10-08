@@ -2,12 +2,17 @@ import type { PatientPrediction, Session } from '../data/types';
 import { linearSlope } from './priority';
 import { addDays, format } from 'date-fns';
 
+// Mínimo de sesiones para proyectar algo con sentido.
+export const MIN_SESSIONS_FOR_PREDICTION = 3;
+
 export function generatePrediction(
   patientId: string,
   sessions: Session[],
   metric: string = 'globalMotorScore',
   weeksAhead: number = 8
-): PatientPrediction {
+): PatientPrediction | null {
+  if (sessions.length < MIN_SESSIONS_FOR_PREDICTION) return null;
+
   const values = sessions.map(s => {
     switch (metric) {
       case 'proximalGripScore': return s.derived.proximalGripScore;
@@ -18,9 +23,9 @@ export function generatePrediction(
   });
 
   const slope = linearSlope(values);
-  const lastValue = values[values.length - 1] ?? 50;
+  const lastValue = values[values.length - 1];
   const variance = computeVariance(values.slice(-10));
-  const lastDate = sessions[sessions.length - 1]?.date ?? new Date().toISOString();
+  const lastDate = sessions[sessions.length - 1].date;
 
   const trajectory: PatientPrediction['trajectory'] = [];
   for (let day = 1; day <= weeksAhead * 7; day++) {
