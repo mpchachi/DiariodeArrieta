@@ -13,14 +13,17 @@ import { startGardenGame } from '../garden/game.js';
 import { createSharedCamera } from './sharedCamera.js';
 import { TravelScene } from './travel.js';
 import { FramingTracker } from './framing.js';
+import { createHandStage } from '../tutorial/handStage.js';
 import { uploadJourney } from '../database/uploadJourney.js';
 import { getSeason, advanceSeason } from '../runner/progress.js';
 import { SEASONS } from '../pixel/seasons.js';
 
+// `gesture`: el que anima la mano gris en la tarjeta de transición (misma mano que la guía
+// dentro del juego, para que el paciente lo vea antes y lo reconozca después).
 export const CHAPTERS = [
-  { key: 'runner', short: 'La carrera', title: 'La carrera por el bosque', howto: '<strong>Junta pulgar e índice</strong> para que el zorro salte.' },
-  { key: 'flappy', short: 'El globo', title: 'El vuelo en globo', howto: '<strong>Cierra el puño</strong> para subir. <strong>Ábrelo</strong> para bajar.' },
-  { key: 'garden', short: 'El huerto', title: 'El huerto del zorro', howto: 'Cierra la mano como si cogieras una regadera e <strong>inclínala</strong> para regar.' },
+  { key: 'runner', short: 'La carrera', title: 'La carrera por el bosque', gesture: 'pinch', howto: '<strong>Junta pulgar e índice</strong> para que el zorro salte.' },
+  { key: 'flappy', short: 'El globo', title: 'El vuelo en globo', gesture: 'fist', howto: '<strong>Cierra el puño</strong> para subir. <strong>Ábrelo</strong> para bajar.' },
+  { key: 'garden', short: 'El huerto', title: 'El huerto del zorro', gesture: 'tilt', howto: 'Cierra la mano como si cogieras una regadera e <strong>inclínala</strong> para regar.' },
 ];
 const INTERLUDE_MS = 6500;
 const HAND_KEY = 'fixedgap_garden_hand';
@@ -126,14 +129,23 @@ export function startFoxJourney(container, { subjectId = null, onExit = null, on
 
   function interlude(i) {
     const c = CHAPTERS[i];
-    screen(`
-      <div class="runner-panel pack-card">
+    const root = screen(`
+      <div class="runner-panel pack-card pack-card--interlude">
         <p class="runner-kicker">Capítulo ${i + 1} de ${CHAPTERS.length}</p>
         <h1>${c.title}</h1>
-        <p class="runner-howto">${c.howto}</p>
+        <div class="pack-gesture">
+          <div class="pack-gesture__stage" aria-hidden="true"></div>
+          <p class="runner-howto pack-gesture__text">${c.howto}</p>
+        </div>
         ${steps(i)}
         <div class="pack-bar" style="--pack-ms:${INTERLUDE_MS}ms"><span></span></div>
       </div>`);
+    // La misma mano gris de la guía, haciendo el gesto del capítulo en bucle. En el
+    // huerto el giro va hacia el lado de verter de la mano elegida.
+    const stage = createHandStage(root.querySelector('.pack-gesture__stage'), { gesture: c.gesture, mirror: c.key === 'garden' && hand === 'Left', size: 176, className: 'pack-gesture__hand' });
+    stage.start();
+    const travelStop = stopCurrent;
+    stopCurrent = () => { stage.dispose(); travelStop?.(); };
     timer = setTimeout(() => play(i), INTERLUDE_MS);
   }
 

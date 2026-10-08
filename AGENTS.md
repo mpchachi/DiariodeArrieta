@@ -170,6 +170,10 @@ Hecho: Runner completo en `demo/src/runner/`, conectado a «Jugar». Pasan tests
 - Mano: dibujo limpio en vez de anatomía (fuera nudillos, tendones y bultos; dedos lisos que se afinan; palma plana muy fundida). Bug corregido en `thumbFrame`: el plano de flexión del pulgar degeneraba al apuntar a la cámara (`cross(z, dir)` ≈ 0) y salía como una salchicha hacia fuera; ahora se dobla siempre hacia la oposición. Poses afinadas numéricamente (pinza tipo «OK» con yemas en contacto, pulgar del puño sobre las falanges medias). Vistas 3/4 legibles; verter usa la misma vista lateral del agarre (puño con pulgar arriba) girando. Con la mano izquierda la cámara también se refleja.
 - `/tutorial.html?gesture=fist&views=yaw,pitch,roll;...` compara cámaras; `QUERY=` en `scripts/shot-tutorial.mjs`.
 
+2026-10-08, la mano también en las transiciones del viaje (Luis: «en las pantallas de carga entre juegos, también»):
+- `tutorial/handStage.js`: escenario reutilizable (lienzo + bucle WebGL con respaldo 2D). `gestureGuide.js` lo usa por dentro (misma guía dentro del juego, sin cambios de comportamiento).
+- `pack/pack.js`: cada capítulo lleva `gesture` (`pinch`/`fist`/`tilt`); la tarjeta de transición (`.pack-card--interlude`) muestra la mano haciendo el gesto en bucle junto a la frase de cómo se juega. En el huerto el giro va hacia el lado de verter de la mano elegida. El test del pack lo comprueba.
+
 2026-10-07, visión por computador blindada.
 - `RunnerCamera` (`runner/camera.js`) reescrita, sin heredar de `PinchCamera`; el Pastillero v2 no se toca.
   - Reloj monótono: `t` = `performance.now()` por fotograma nuevo; antes se usaba el tiempo del vídeo, que vuelve a 0 al reconectar y bloqueaba la pinza.

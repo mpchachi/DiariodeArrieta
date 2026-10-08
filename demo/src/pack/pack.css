@@ -16,6 +16,22 @@
 @keyframes pack-fill { to { width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .pack-bar span { animation-duration: var(--pack-ms, 6s); } }
 
+/* Transición de capítulo: la mano gris haciendo el gesto, con la frase al lado. */
+.pack-app .pack-card--interlude { max-width: 34rem; max-height: 72vh; }
+.pack-gesture { display: flex; align-items: center; justify-content: center; gap: 1.1rem; margin: .6rem 0 .2rem; text-align: left; }
+.pack-gesture__stage {
+  position: relative; flex: 0 0 auto; width: 176px; height: 176px; border-radius: 50%;
+  background: radial-gradient(circle at 50% 42%, #ffffff 0%, #f3f5f9 58%, #e9edf3 100%);
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12), inset 0 -18px 30px -24px rgba(15, 23, 42, 0.22), 0 0 0 3px var(--ink);
+}
+.pack-gesture__hand { position: absolute; inset: 0; width: 100%; height: 100%; display: block; filter: drop-shadow(0 12px 16px rgba(15, 23, 42, 0.18)); }
+.pack-gesture__text { margin: 0; max-width: 15rem; }
+@media (max-width: 560px), (max-height: 600px) {
+  .pack-gesture { flex-direction: column; gap: .5rem; text-align: center; }
+  .pack-gesture__stage { width: 136px; height: 136px; }
+  .pack-gesture__text { max-width: none; }
+}
+
 /* Comprobación de encuadre: vista previa de la cámara (solo antes de empezar). */
 .pack-app .pack-card--framing { max-height: 92vh; top: 4vh; }
 .pack-preview { margin: .6rem auto; width: min(320px, 70vw); border: 4px solid var(--ink); background: var(--ink); line-height: 0; }

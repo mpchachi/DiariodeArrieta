@@ -41,6 +41,9 @@ try {
     await page.clock.runFor(1500);
     assert.match(await text('.pack-card .runner-kicker'), new RegExp(`Capítulo ${i} de 3`));
     assert.match(await text('.pack-card h1'), title);
+    // La mano gris haciendo el gesto del capítulo, junto a la frase.
+    assert.equal(await page.locator('.pack-card .pack-gesture__hand').count(), 1, `mano en la transición ${i}`);
+    assert.ok(await page.locator('.pack-card .pack-gesture__text').textContent(), 'frase del gesto');
     if (shots) await page.screenshot({ path: `${shots}/pack-chapter${i}.png` });
     // Sin botones: empieza solo al cabo de unos segundos.
     assert.equal(await page.locator('.pack-card button').count(), 0);
