@@ -148,10 +148,13 @@ export interface Patient {
   pseudonym: string;
   age: number;
   sex: 'M' | 'F' | 'other';
-  strokeType: StrokeType | null; // null = no consta (el alta ya no lo pide)
-  strokeDate: string;
-  affectedSide: AffectedSide;
-  mobility: MobilityLevel;
+  // 'healthy' = voluntario sano (grupo de referencia): sin datos de ictus.
+  subjectType: 'patient' | 'healthy';
+  // Datos clínicos: null = no consta (nunca se inventan).
+  strokeType: StrokeType | null;
+  strokeDate: string | null;
+  affectedSide: AffectedSide | null;
+  mobility: MobilityLevel | null;
   clinicianIds: string[];
   baselineSessionId: string;
   prescribedExercises: PrescribedExercise[];

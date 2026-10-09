@@ -62,13 +62,32 @@ function tremorRms(series, still) {
   return res.length >= 10 ? Math.sqrt(mean(res.map(x => x * x))) : null;
 }
 const tremorBand = level => (level === null ? null : level > 3.5 ? 'pathological' : level > 1.5 ? 'physiological' : 'none');
-// Submovimientos: picos locales de velocidad por encima del 20 % del máximo (1 = gesto limpio).
+// Media móvil centrada (±k muestras): quita el temblor de fotograma del vídeo antes de
+// contar picos, para no confundir ruido de la detección con tirones del movimiento.
+function smoothSeries(series, k = 2) {
+  return series.map((p, i) => {
+    const w = series.slice(Math.max(0, i - k), i + k + 1).map(x => x.v).filter(v => num(v) !== null);
+    return { t: p.t, v: w.length ? mean(w) : p.v };
+  });
+}
+// Submovimientos: picos de velocidad que de verdad son un «nuevo empujón». Un pico cuenta
+// si supera el 25 % del máximo y, desde el anterior pico contado, la velocidad bajó a menos
+// de la mitad (si no, es el mismo gesto). 1 = gesto limpio.
 function submovements(series) {
-  const sp = speedProfile(series);
+  // Dos pasadas de ±3 muestras (≈ 200 ms a 30 fps): pasa el gesto voluntario (< 2 Hz) y quita el
+  // ruido de detección (> 8 Hz), que con un vertido lento puede dar más velocidad aparente que el gesto.
+  const sp = speedProfile(smoothSeries(smoothSeries(series, 3), 3));
   if (sp.length < 5) return null;
-  const peak = Math.max(...sp), thr = peak * 0.2;
-  let n = 0;
-  for (let i = 1; i < sp.length - 1; i++) if (sp[i] > thr && sp[i] >= sp[i - 1] && sp[i] > sp[i + 1]) n++;
+  const peak = Math.max(...sp), thr = peak * 0.25;
+  if (!(peak > 0)) return null;
+  let n = 0, lastPeak = null, valley = Infinity;
+  for (let i = 1; i < sp.length - 1; i++) {
+    valley = Math.min(valley, sp[i]);
+    if (sp[i] > thr && sp[i] >= sp[i - 1] && sp[i] > sp[i + 1]) {
+      if (lastPeak === null || valley < 0.5 * Math.min(lastPeak, sp[i])) { n++; lastPeak = sp[i]; valley = Infinity; }
+      else lastPeak = Math.max(lastPeak, sp[i]);
+    }
+  }
   return Math.max(1, n);
 }
 
@@ -154,9 +173,16 @@ export function gardenRow(r) {
   const s = r.summary || {}, flowers = r.flowers || [], sign = r.pourSign ?? -1;
   // Señal de giro hacia el lado de verter (+ = pronación) por flor.
   const series = flowers.map(f => (f.signal || []).map(([t, rel]) => ({ t, v: sign * rel })));
+  // Para la calidad del gesto de verter solo cuenta el lado de verter: girar hacia el otro
+  // lado (buscar hacia dónde se riega) no es un tirón del movimiento de verter.
+  const pourSeries = series.map(sr => sr.map(p => ({ t: p.t, v: Math.max(0, p.v) })));
   const all = series.flat();
+  const pourAll = pourSeries.flat();
   const maxSup = Math.max(0, ...flowers.map(f => f.peakOppositeDeg ?? 0));
-  const subs = series.map(submovements).filter(v => v !== null);
+  // Brusquedad del gesto de verter: submovimientos en la IDA (hasta la inclinación máxima).
+  // La vuelta a recto es otro gesto y no se cuenta como un «tirón».
+  const outward = sr => { let k = 0; sr.forEach((p, i) => { if (p.v > sr[k].v) k = i; }); return sr.slice(0, k + 1); };
+  const subs = pourSeries.map(sr => submovements(outward(sr))).filter(v => v !== null);
   const velocities = flowers.map(f => f.peakVelocityOutDegS);
   const wrong = flowers.filter(f => (f.peakOppositeDeg ?? 0) > 15).length;
   const tremor = tremorRms(all, 6);
@@ -168,8 +194,8 @@ export function gardenRow(r) {
     rom_deg_p90: round((s.maxTiltDeg ?? 0) + maxSup, 1),
     mean_peak_velocity: round(median(velocities), 1), // °/s
     peak_velocity_cv: round(cv(velocities), 3),
-    session_sparc: sparc(all),
-    sparc_mean: round(mean(sparcPerMovement(all)), 3),
+    session_sparc: sparc(pourAll),
+    sparc_mean: round(mean(sparcPerMovement(pourAll)), 3),
     tremor_amp_mean: round(tremor, 3), tremor_band: tremorBand(tremor === null ? null : clamp(tremor, 0, 6)),
     rep_count: smallint(s.flowersBloomed),
     mean_duration_ms: round(s.medianTimeToBloomMs, 0),
@@ -180,11 +206,14 @@ export function gardenRow(r) {
       maxSupination: round(maxSup, 1), maxPronation: round(s.maxTiltDeg ?? 0, 1),
       smoothnessJerk: round(subs.length ? clamp(mean(subs) - 1, 0, 6) : 0, 2),
       waterAccuracy: round(s.flowersTotal ? s.flowersBloomed / s.flowersTotal * 100 : 0, 1),
-      poisonError: round(flowers.length ? wrong / flowers.length * 50 : 0, 1),
+      // El huerto no tiene «derrames»: girar al lado contrario es buscar la dirección (o no
+      // saberla), no un error de precisión. Se registra aparte (outcome.wrongDirectionFlowers).
+      poisonError: 0,
       averagePouringTime: round(s.medianTimeToBloomMs ?? 0, 0),
     },
     outcome: { completed: !!r.completed, flowersBloomed: s.flowersBloomed, flowersTotal: s.flowersTotal, hand: r.hand ?? null,
-      adapted: !!s.adapted, finalPourStartDeg: s.finalPourStartDeg ?? null, compensationFlowers: s.compensationFlowers ?? null },
+      adapted: !!s.adapted, finalPourStartDeg: s.finalPourStartDeg ?? null, compensationFlowers: s.compensationFlowers ?? null,
+      wrongDirectionFlowers: wrong, maxWrongDirectionDeg: round(maxSup, 1) },
     repetitions: flowers.map(f => ({ index: f.index, kind: f.kind, peak_tilt_deg: f.peakTiltDeg, peak_opposite_deg: f.peakOppositeDeg,
       time_to_bloom_ms: f.timeToBloomMs, return_ms: f.returnMs, peak_velocity_out: f.peakVelocityOutDegS, peak_velocity_back: f.peakVelocityBackDegS })),
   };

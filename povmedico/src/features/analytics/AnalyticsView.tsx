@@ -156,7 +156,8 @@ export function PatientCohortComparison() {
   const lastSession = sessions[sessions.length - 1];
   const matchedPatients = patients.filter(p =>
     p.id !== patient.id &&
-    p.mobility === patient.mobility &&
+    p.subjectType === patient.subjectType &&
+    (patient.mobility === null || p.mobility === patient.mobility) &&
     Math.abs(p.age - patient.age) <= 10 &&
     p.strokeType === patient.strokeType
   );
@@ -182,7 +183,7 @@ export function PatientCohortComparison() {
         </Link>
       </div>
       <p className="text-[11px] text-txt-muted mb-3">
-        Comparado con {matchedPatients.length} pacientes (movilidad {{ agile: 'ágil', moderate: 'moderada', reduced: 'reducida' }[patient.mobility]}, ±10 años{patient.strokeType ? `, ${patient.strokeType === 'ischemic' ? 'isquémico' : 'hemorrágico'}` : ''})
+        Comparado con {matchedPatients.length} {patient.subjectType === 'healthy' ? 'voluntarios sanos' : 'pacientes'} ({patient.mobility ? `movilidad ${{ agile: 'ágil', moderate: 'moderada', reduced: 'reducida' }[patient.mobility]}, ` : ''}±10 años{patient.strokeType ? `, ${patient.strokeType === 'ischemic' ? 'isquémico' : 'hemorrágico'}` : ''})
       </p>
       <div className="flex items-center gap-4">
         <div className="flex-1">

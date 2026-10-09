@@ -67,6 +67,7 @@ export function generateMockData(): MockData {
     patients.push({
       id: patientId,
       pseudonym: `PT-${String(rng.nextInt(1000, 9999))}`,
+      subjectType: 'patient',
       age,
       sex: rng.pick(['M', 'F', 'other'] as const),
       strokeType,

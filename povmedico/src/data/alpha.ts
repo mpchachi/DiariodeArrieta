@@ -101,6 +101,7 @@ export function buildAlpha(activeClinicianId = 'clin-001'): AlphaData | null {
   const patient: Patient = {
     id: ALPHA_ID,
     pseudonym: 'ALPHA-001',
+    subjectType: 'patient',
     age: 58,
     sex: 'other',
     strokeType: 'ischemic',

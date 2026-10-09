@@ -71,7 +71,42 @@ test('huerto: resultado con el formato real del juego (summarize) → pronación
   assert.equal(row.max_supination_deg, 22);
   assert.equal(row.rom_deg_p90, 76);
   assert.equal(row.metrics_display.waterAccuracy, 100);
-  assert.equal(row.metrics_display.poisonError, 10); // 1 de 5 flores con giro al lado contrario > 15°
+  assert.equal(row.metrics_display.poisonError, 0); // girar al otro lado no es un «derrame»
+  assert.equal(row.outcome.wrongDirectionFlowers, 1); // pero queda registrado aparte
   assert.equal(row.metrics_display.smoothnessJerk, 0); // giro limpio: un solo submovimiento por flor
   assert.equal(row.repetitions.length, 5);
+});
+
+// Caso real (Dr. García, 08/10): voluntario sano que en varias flores giró primero hacia el
+// lado contrario buscando por dónde se riega. No debe salir como error de precisión ni
+// como movimiento brusco; un vertido de verdad con varios tirones sí debe detectarse.
+const flowerFrom = (k, fn, n = 120) => ({ index: k, kind: 'tulip', peakTiltDeg: 40, peakOppositeDeg: 0,
+  readyAt: k * 10000, pourStartAt: k * 10000 + 400, bloomAt: k * 10000 + 3000, returnAt: k * 10000 + 3500, pourMs: 2600,
+  peakVelIn: 110, peakVelOut: 90, startThresholdDeg: 25, compensation: false,
+  samples: Array.from({ length: n }, (_, i) => [k * 10000 + i * 33, fn(i, n)]) });
+const jitter = i => Math.sin(i * 2.7) * 1.2 + Math.cos(i * 4.1) * 0.8; // ruido de detección de ±2°
+const gardenFrom = flowers => gardenRow({ durationMs: 60000, completed: true, hand: 'Right', quality: { trackedCoverage: 1 },
+  ...summarize({ flowers, neutral: 0, pourSign: -1, pourStart: 25 }) });
+
+test('huerto: buscar el lado (girar al contrario) no cuenta como error ni como brusquedad', () => {
+  // Medio tiempo girando al lado contrario (supinación, +rel con mano derecha) y después un vertido limpio.
+  const search = (i, n) => i < n / 2 ? 80 * Math.sin(Math.PI * i / (n / 2)) + jitter(i) : -40 * Math.sin(Math.PI * (i - n / 2) / (n / 2)) + jitter(i);
+  const row = gardenFrom([0, 1, 2, 3, 4].map(k => ({ ...flowerFrom(k, search), peakOppositeDeg: 80 })));
+  assert.equal(row.metrics_display.poisonError, 0);
+  assert.ok(row.metrics_display.smoothnessJerk <= 1, `brusquedad ${row.metrics_display.smoothnessJerk}`);
+  assert.equal(row.outcome.wrongDirectionFlowers, 5);
+  assert.equal(row.max_supination_deg, 80); // el rango de supinación sí es real y se conserva
+});
+
+test('huerto: el ruido de la detección no se cuenta como tirones', () => {
+  const clean = (i, n) => -40 * Math.sin(Math.PI * i / n) + jitter(i);
+  assert.equal(gardenFrom([0, 1, 2].map(k => flowerFrom(k, clean))).metrics_display.smoothnessJerk, 0);
+});
+
+test('huerto: un vertido a tirones (3 empujones) sí se detecta como brusco', () => {
+  // Tres empujones separados por pausas: 0 → 15° → pausa → 30° → pausa → 45°.
+  const steps = (i, n) => { const u = i / n; const stage = Math.min(3, Math.floor(u * 3.6));
+    const within = Math.min(1, (u * 3.6 - stage) * 2.5); return -(15 * stage + 15 * Math.min(1, within)) + jitter(i) * 0.3; };
+  const row = gardenFrom([0, 1, 2].map(k => flowerFrom(k, steps)));
+  assert.ok(row.metrics_display.smoothnessJerk >= 2, `brusquedad ${row.metrics_display.smoothnessJerk}`);
 });

@@ -26,10 +26,10 @@ export default function Anatomy3DPage() {
         <Link to={`/patient/${id}`} className="text-sm text-clay-distal hover:underline">← Volver al paciente</Link>
       </div>
       <h1 className="text-2xl font-bold text-clay-text mb-2">Modelo anatómico 3D</h1>
-      <p className="text-sm text-clay-text-secondary mb-4">{patient.pseudonym} · Lado afecto: {patient.affectedSide === 'left' ? 'Izquierdo' : 'Derecho'}</p>
+      <p className="text-sm text-clay-text-secondary mb-4">{patient.pseudonym} · {patient.subjectType === 'healthy' ? 'Voluntario sano' : `Lado afecto: ${patient.affectedSide ? (patient.affectedSide === 'left' ? 'Izquierdo' : 'Derecho') : 'No consta'}`}</p>
 
       <Card>
-        <AnatomyModel derived={lastSession.derived} affectedSide={patient.affectedSide} />
+        <AnatomyModel derived={lastSession.derived} affectedSide={patient.affectedSide ?? 'right'} />
       </Card>
     </div>
   );

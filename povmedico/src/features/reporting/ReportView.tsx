@@ -63,10 +63,14 @@ export function ReportView() {
           <h2 className="text-lg font-bold text-clay-text mb-3">Resumen del paciente</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div><span className="text-clay-text-muted">Edad:</span> {patient.age} años</div>
-            <div><span className="text-clay-text-muted">Movilidad:</span> <span className="capitalize">{{ agile: 'Ágil', moderate: 'Moderado', reduced: 'Reducido' }[patient.mobility] ?? patient.mobility}</span></div>
-            <div><span className="text-clay-text-muted">Lado afecto:</span> {patient.affectedSide === 'left' ? 'Izquierdo' : 'Derecho'}</div>
-            <div><span className="text-clay-text-muted">Tipo de ictus:</span> {patient.strokeType ? (patient.strokeType === 'ischemic' ? 'Isquémico' : 'Hemorrágico') : 'No consta'}</div>
-            <div><span className="text-clay-text-muted">Fecha del ictus:</span> {patient.strokeDate}</div>
+            {patient.subjectType === 'healthy' ? (
+              <div className="md:col-span-3"><span className="text-clay-text-muted">Tipo:</span> Voluntario sano (grupo de referencia)</div>
+            ) : (<>
+              <div><span className="text-clay-text-muted">Movilidad:</span> {patient.mobility ? { agile: 'Ágil', moderate: 'Moderado', reduced: 'Reducido' }[patient.mobility] : 'No consta'}</div>
+              <div><span className="text-clay-text-muted">Lado afecto:</span> {patient.affectedSide ? (patient.affectedSide === 'left' ? 'Izquierdo' : 'Derecho') : 'No consta'}</div>
+              <div><span className="text-clay-text-muted">Tipo de ictus:</span> {patient.strokeType ? (patient.strokeType === 'ischemic' ? 'Isquémico' : 'Hemorrágico') : 'No consta'}</div>
+              <div><span className="text-clay-text-muted">Fecha del ictus:</span> {patient.strokeDate ?? 'No consta'}</div>
+            </>)}
             <div><span className="text-clay-text-muted">Sesiones:</span> {sessions.length}</div>
             <div><span className="text-clay-text-muted">Periodo:</span> {firstSession.date} — {lastSession.date}</div>
           </div>

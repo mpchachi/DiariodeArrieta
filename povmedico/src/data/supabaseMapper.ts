@@ -5,6 +5,7 @@ import { computeDerivedClinical } from '../domain/scores';
 export function mapSupabaseSubject(subject: any): Patient {
   // Use patient_data jsonb or defaults for missing fields
   const patientData = subject.patient_data || {};
+  const isHealthy = subject.subject_type === 'healthy';
   
   // Real subjects from DB will not have prescribed exercises or events yet
   const prescribedExercises: PrescribedExercise[] = [];
@@ -16,11 +17,13 @@ export function mapSupabaseSubject(subject: any): Patient {
     id: subject.id,
     pseudonym: subject.display_name || 'Desconocido',
     age,
-    sex: subject.sex || 'other',
-    strokeType: patientData.strokeType ?? null,
-    strokeDate: patientData.strokeDate || new Date().toISOString().split('T')[0],
-    affectedSide: patientData.affectedSide || (subject.dominant_hand === 'right' ? 'left' : 'right'),
-    mobility: patientData.mobility || 'moderate',
+    sex: subject.sex === 'male' ? 'M' : subject.sex === 'female' ? 'F' : 'other',
+    // Voluntario sano: sin datos de ictus. Paciente: lo que se dio de alta; si falta, null (no se inventa).
+    subjectType: isHealthy ? 'healthy' : 'patient',
+    strokeType: isHealthy ? null : patientData.strokeType ?? null,
+    strokeDate: isHealthy ? null : patientData.strokeDate ?? null,
+    affectedSide: isHealthy ? null : patientData.affectedSide ?? null,
+    mobility: isHealthy ? null : patientData.mobility ?? null,
     clinicianIds: subject.operator_id ? [subject.operator_id] : ['clin-001'],
     baselineSessionId: '', // To be filled later if needed, or left empty
     prescribedExercises,
@@ -64,7 +67,9 @@ export function mapSupabaseSession(sessionRow: any, gameResultRows: any[]): Sess
     return {
       game: gameId,
       durationMs: gr.duration_ms || 0,
-      metrics: gr.metrics_display || {},
+      // El huerto (fox_garden) no tiene «derrames»: girar al lado contrario es buscar la dirección,
+      // no un error de precisión. Se fuerza a 0 también en partidas guardadas antes del cambio.
+      metrics: gr.game_key === 'fox_garden' ? { ...(gr.metrics_display || {}), poisonError: 0 } : (gr.metrics_display || {}),
       enriched,
       frames: [],
     };

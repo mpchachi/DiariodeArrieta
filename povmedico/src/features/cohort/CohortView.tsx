@@ -152,9 +152,9 @@ export function CohortView() {
                       >
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
-                            <BodyIcon side={p.affectedSide} size={16} />
+                            {p.affectedSide && <BodyIcon side={p.affectedSide} size={16} />}
                             <span className="font-semibold text-txt">{p.pseudonym}</span>
-                            <MobilityTag mobility={p.mobility} />
+                            {p.subjectType === 'healthy' ? <MobilityTag mobility="healthy" /> : p.mobility && <MobilityTag mobility={p.mobility} />}
                             <span className="text-[10px] text-txt-muted">{p.age} a</span>
                           </div>
                         </td>
@@ -254,8 +254,8 @@ function PatientCard({ patient: p, sessions, expanded, onToggle, onNavigate, var
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className={`font-display font-bold text-txt ${isSpotlight ? 'text-[15px]' : 'text-[14px]'}`}>{p.pseudonym}</span>
-            <MobilityTag mobility={p.mobility} />
-            <BodyIcon side={p.affectedSide} size={isSpotlight ? 18 : 16} />
+            {p.subjectType === 'healthy' ? <MobilityTag mobility="healthy" /> : p.mobility && <MobilityTag mobility={p.mobility} />}
+            {p.affectedSide && <BodyIcon side={p.affectedSide} size={isSpotlight ? 18 : 16} />}
           </div>
           {activeFlags.length > 0 && (
             <div className="flex gap-1 mt-1.5">
@@ -380,7 +380,7 @@ function getTrendColor(scores: number[]): string {
 }
 
 function MobilityTag({ mobility }: { mobility: string }) {
-  const labels: Record<string, string> = { agile: 'Ágil', moderate: 'Moderado', reduced: 'Reducido' };
+  const labels: Record<string, string> = { agile: 'Ágil', moderate: 'Moderado', reduced: 'Reducido', healthy: 'Sano' };
   return (
     <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-clay-surface-elevated border-2 border-clay-border text-txt-muted uppercase tracking-wider font-bold font-display shadow-clay-inset">
       {labels[mobility] ?? mobility}

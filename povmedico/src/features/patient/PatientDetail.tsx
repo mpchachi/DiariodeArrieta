@@ -36,7 +36,9 @@ export function PatientDetail() {
 
   const lastSession = sessions[sessions.length - 1];
   const baselineSession = sessions[0];
-  const daysSinceStroke = differenceInDays(new Date('2026-05-28'), new Date(patient.strokeDate));
+  // Días desde el ictus contra HOY (antes se calculaba contra una fecha fija y salían negativos).
+  const daysSinceStroke = patient.strokeDate ? differenceInDays(new Date(), new Date(patient.strokeDate)) : null;
+  const sexLabel = patient.sex === 'M' ? 'Hombre' : patient.sex === 'F' ? 'Mujer' : 'Otro';
   const deltaVsBaseline = lastSession && baselineSession
     ? lastSession.derived.globalMotorScore - baselineSession.derived.globalMotorScore
     : 0;
@@ -60,11 +62,15 @@ export function PatientDetail() {
           <div>
             <h1 className="text-xl font-semibold text-txt tracking-tight">{patient.pseudonym}</h1>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <InfoPill>{patient.age} años · {patient.sex}</InfoPill>
-              <InfoPill className="capitalize">{{ agile: 'Ágil', moderate: 'Moderado', reduced: 'Reducido' }[patient.mobility]}</InfoPill>
-              <InfoPill>{patient.affectedSide === 'left' ? 'Lado izquierdo' : 'Lado derecho'}</InfoPill>
-              {patient.strokeType && <InfoPill>{patient.strokeType === 'ischemic' ? 'Isquémico' : 'Hemorrágico'}</InfoPill>}
-              <InfoPill>{daysSinceStroke} días desde el ictus</InfoPill>
+              <InfoPill>{patient.age} años · {sexLabel}</InfoPill>
+              {patient.subjectType === 'healthy' ? (
+                <InfoPill>Voluntario sano · grupo de referencia</InfoPill>
+              ) : (<>
+                {patient.mobility && <InfoPill className="capitalize">{{ agile: 'Ágil', moderate: 'Moderado', reduced: 'Reducido' }[patient.mobility]}</InfoPill>}
+                {patient.affectedSide && <InfoPill>{patient.affectedSide === 'left' ? 'Lado izquierdo' : 'Lado derecho'}</InfoPill>}
+                {patient.strokeType && <InfoPill>{patient.strokeType === 'ischemic' ? 'Isquémico' : 'Hemorrágico'}</InfoPill>}
+                {daysSinceStroke !== null && daysSinceStroke >= 0 && <InfoPill>{daysSinceStroke === 1 ? '1 día' : `${daysSinceStroke} días`} desde el ictus</InfoPill>}
+              </>)}
             </div>
           </div>
           <div className="flex items-center gap-4">
