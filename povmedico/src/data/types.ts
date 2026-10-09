@@ -70,6 +70,10 @@ export interface EnrichedColumns {
 
 export interface GameResult {
   game: GameId;
+  /** Clave real del juego en la base de datos (fox_runner, fox_balloon, fox_garden…). */
+  key?: string;
+  /** Fila completa de game_results (columnas medidas, outcome y repeticiones). */
+  raw?: Record<string, unknown>;
   durationMs: number;
   metrics: SlingshotMetrics | FlappyMetrics | WaterMetrics;
   enriched?: EnrichedColumns;
@@ -120,6 +124,11 @@ export interface Session {
   id: string;
   patientId: string;
   date: string;
+  /** Fecha y hora completas de inicio (ISO). */
+  startedAt?: string;
+  completed?: boolean;
+  /** % medio de fotogramas con la mano bien detectada. */
+  qualityPct?: number | null;
   handUsed: Hand;
   games: GameResult[];
   derived: DerivedClinical;
@@ -150,6 +159,8 @@ export interface Patient {
   sex: 'M' | 'F' | 'other';
   // 'healthy' = voluntario sano (grupo de referencia): sin datos de ictus.
   subjectType: 'patient' | 'healthy';
+  /** Notas libres del alta (opcional). */
+  notes?: string | null;
   // Datos clínicos: null = no consta (nunca se inventan).
   strokeType: StrokeType | null;
   strokeDate: string | null;

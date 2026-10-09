@@ -269,3 +269,12 @@ Pendiente / bugs vistos en el portátil de Mateo (Chrome, cámara real):
 2026-10-08, menos ruido en el dashboard:
 - Borrados los 8 pacientes de demostración (con sesiones y resultados). `scripts/seed-demo-data.mjs` sigue disponible, pero no se usa.
 - `008`: mateo sale del «Equipo piloto». Arrieta y García se ven los pacientes entre sí; los de mateo solo los ve mateo (y mateo no ve los de ellos).
+
+2026-10-09, dashboard clínico rehecho (`povmedico/`), sin datos inventados:
+- Pantallas: **Pacientes** (`features/patients/PatientsPage`), **Ficha** (`PatientPage`: última sesión, evolución, sesiones con detalle y repeticiones), **Informe** imprimible (`features/reporting/PatientReport`) y **Ejercicios y medidas** (`features/exercises/ExercisesGuide`).
+- Retirado: índice motor compuesto, alertas clínicas por umbrales arbitrarios, predicciones, correlación con ejercicios prescritos, anatomía 3D, analítica de cohorte, generador de informes y datos simulados (`mockGenerator` ya no se carga). Las rutas antiguas redirigen.
+- Única fuente de medidas: `src/data/measures.ts` (columna de origen, unidad, cómo se obtiene, qué indica, sentido favorable solo si es inequívoco). Si una medida no existe en la partida, no se muestra.
+- Avisos de la lista solo objetivos: seguimiento < 80 %, viaje incompleto, > 14 días sin jugar.
+- Evolución solo con ≥ 2 sesiones; eje temporal real; línea discontinua = primera sesión.
+- Estilo: plano (Square UI / Swiss), Figtree, filetes de 1 px, sin sombras ni bordes de color (`components/ui.tsx`).
+- `src/domain/scores.test.ts` tiene 6 fallos previos (índice compuesto antiguo, ya sin uso en la UI).

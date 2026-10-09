@@ -1,38 +1,25 @@
-import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
-import { CohortView } from '../features/cohort/CohortView';
-import { PatientDetail } from '../features/patient/PatientDetail';
-import { RehabCorrelation } from '../features/rehab/RehabCorrelation';
-import { PredictionsView } from '../features/predictions/PredictionsView';
-import { AnalyticsView } from '../features/analytics/AnalyticsView';
-import { ReportView } from '../features/reporting/ReportView';
+import { PatientsPage } from '../features/patients/PatientsPage';
+import { PatientPage } from '../features/patients/PatientPage';
+import { PatientReport } from '../features/reporting/PatientReport';
+import { ExercisesGuide } from '../features/exercises/ExercisesGuide';
 
-const Anatomy3DPage = lazy(() => import('../features/anatomy3d/Anatomy3DPage'));
-const ExercisesPage = lazy(() => import('../features/rehab/ExercisesPage'));
-const ReportsPage = lazy(() => import('../features/reporting/ReportsPage'));
-
-function Loading() {
-  return <div className="flex items-center justify-center h-32 text-txt-muted">Cargando...</div>;
-}
-
+// Pantallas del panel clínico. Las antiguas (predicciones, correlación con ejercicios
+// prescritos, anatomía 3D, analítica de cohorte y generador de informes) se retiraron:
+// mostraban datos simulados o calculados sin base suficiente. Sus rutas redirigen.
 export function Router() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <Layout>
-        <Suspense fallback={<Loading />}>
-          <Routes>
-            <Route path="/" element={<CohortView />} />
-            <Route path="/exercises" element={<ExercisesPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/patient/:id" element={<PatientDetail />} />
-            <Route path="/patient/:id/predictions" element={<PredictionsView />} />
-            <Route path="/patient/:id/rehab" element={<RehabCorrelation />} />
-            <Route path="/patient/:id/anatomy" element={<Anatomy3DPage />} />
-            <Route path="/patient/:id/report" element={<ReportView />} />
-            <Route path="/analytics" element={<AnalyticsView />} />
-          </Routes>
-        </Suspense>
+        <Routes>
+          <Route path="/" element={<PatientsPage />} />
+          <Route path="/patient/:id" element={<PatientPage />} />
+          <Route path="/patient/:id/report" element={<PatientReport />} />
+          <Route path="/exercises" element={<ExercisesGuide />} />
+          <Route path="/patient/:id/*" element={<Navigate to=".." relative="path" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </Layout>
     </BrowserRouter>
   );

@@ -20,6 +20,7 @@ export function mapSupabaseSubject(subject: any): Patient {
     sex: subject.sex === 'male' ? 'M' : subject.sex === 'female' ? 'F' : 'other',
     // Voluntario sano: sin datos de ictus. Paciente: lo que se dio de alta; si falta, null (no se inventa).
     subjectType: isHealthy ? 'healthy' : 'patient',
+    notes: subject.notes ?? null,
     strokeType: isHealthy ? null : patientData.strokeType ?? null,
     strokeDate: isHealthy ? null : patientData.strokeDate ?? null,
     affectedSide: isHealthy ? null : patientData.affectedSide ?? null,
@@ -66,6 +67,8 @@ export function mapSupabaseSession(sessionRow: any, gameResultRows: any[]): Sess
 
     return {
       game: gameId,
+      key: gr.game_key,
+      raw: gr,
       durationMs: gr.duration_ms || 0,
       // El huerto (fox_garden) no tiene «derrames»: girar al lado contrario es buscar la dirección,
       // no un error de precisión. Se fuerza a 0 también en partidas guardadas antes del cambio.
@@ -79,6 +82,9 @@ export function mapSupabaseSession(sessionRow: any, gameResultRows: any[]): Sess
     id: sessionRow.id,
     patientId: sessionRow.subject_id,
     date: sessionRow.started_at ? sessionRow.started_at.split('T')[0] : new Date().toISOString().split('T')[0],
+    startedAt: sessionRow.started_at ?? undefined,
+    completed: !!sessionRow.completed,
+    qualityPct: sessionRow.quality_frames_pct ?? null,
     handUsed: sessionRow.device?.handUsed || 'right',
     games,
     derived: computeDerivedClinical(games), // Calculate metrics based on the mapped games
