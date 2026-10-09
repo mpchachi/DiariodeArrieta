@@ -30,17 +30,17 @@
   /* ── Paleta FixedGap (criterio Hallmark: OKLCH, neutros tintados, un solo acento) ──
      Interfaz monocroma: papel cálido, tinta grafito. El color se reserva para los DATOS:
      3 dominios (uno por capítulo, misma luminosidad y croma bajo) y 3 estados clínicos. */
-  --color-clay-bg: oklch(97% 0.006 80);             /* papel */
-  --color-clay-surface: oklch(99% 0.004 80);        /* tarjeta */
-  --color-clay-surface-solid: oklch(99% 0.004 80);
-  --color-clay-surface-elevated: oklch(95.5% 0.007 80);
-  --color-clay-surface-hover: oklch(94% 0.008 80);
-  --color-clay-border: oklch(90.5% 0.008 80);       /* filete */
-  --color-clay-border-active: oklch(81% 0.010 80);
+  --color-clay-bg: oklch(1 0 0);                    /* fondo (shadcn slate) */
+  --color-clay-surface: oklch(1 0 0);               /* tarjeta */
+  --color-clay-surface-solid: oklch(1 0 0);
+  --color-clay-surface-elevated: oklch(0.968 0.007 247.896);
+  --color-clay-surface-hover: oklch(0.968 0.007 247.896);
+  --color-clay-border: oklch(0.929 0.013 255.508);  /* filete */
+  --color-clay-border-active: oklch(0.869 0.022 252.894);
 
   /* ── Acento = tinta (navegación activa, botones, foco). Sin azul, sin neón. ── */
-  --color-accent: oklch(22% 0.012 70);
-  --color-accent-soft: oklch(93% 0.010 80);
+  --color-accent: oklch(0.208 0.042 265.755);
+  --color-accent-soft: oklch(0.968 0.007 247.896);
 
   /* ── Dominios: La carrera (arcilla) · El globo (acero) · El huerto (crepúsculo) ── */
   --color-dom-proximal: oklch(58% 0.11 48);
@@ -53,9 +53,9 @@
   --color-alert: oklch(52% 0.15 27);
 
   /* ── Texto ── */
-  --color-txt: oklch(22% 0.012 70);                 /* tinta */
-  --color-txt-secondary: oklch(41% 0.012 70);
-  --color-txt-muted: oklch(55% 0.010 75);
+  --color-txt: oklch(0.129 0.042 264.695);          /* tinta */
+  --color-txt-secondary: oklch(0.372 0.044 257.287);
+  --color-txt-muted: oklch(0.554 0.046 257.417);
 
   /* ── Alias usados por algunas pantallas antiguas (antes no existían → sin color) ── */
   --color-clay-text: var(--color-txt);
@@ -77,9 +77,9 @@
   --shadow-clay-elevated: 0 8px 24px oklch(22% 0.012 70 / 0.10), 0 1px 2px oklch(22% 0.012 70 / 0.06);
   --shadow-clay-inset: none;
 
-  /* ── Tipografía: Figtree (recomendada para entornos sanitarios; legible en cifras) ── */
-  --font-display: 'Figtree', ui-sans-serif, system-ui, sans-serif;
-  --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif;
+  /* ── Tipografía: Inter, la misma que la plataforma (shadcn-admin) ── */
+  --font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
 /* ── Base ── */
@@ -200,7 +200,7 @@ h1, h2, h3, h4 {
 /* ── Selection ── */
 ::selection {
   background: oklch(90% 0.03 72);
-  color: oklch(22% 0.012 70);
+  color: oklch(0.129 0.042 264.695);
 }
 
 /* ── Print ── */

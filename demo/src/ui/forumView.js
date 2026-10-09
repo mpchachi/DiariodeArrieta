@@ -19,8 +19,8 @@ export function mountForum(root, { me }) {
   const comments = new Map();
 
   root.innerHTML = `
-    <section class="op-section forum">
-      <header class="op-head">
+    <section class="ui-page forum">
+      <header class="ui-page-head">
         <div>
           <h1>Foro</h1>
           <p>Canal común de todo el equipo: dudas, avisos y sugerencias. Lo ven todas las cuentas.</p>
@@ -32,8 +32,8 @@ export function mountForum(root, { me }) {
           <textarea name="body" rows="4" maxlength="10000" placeholder="Detalles (opcional)"></textarea>
           <div class="forum-composer-actions">
             <span class="forum-error" data-role="post-error" role="alert"></span>
-            <button type="button" class="op-btn op-btn-ghost" data-action="cancel">Cancelar</button>
-            <button type="submit" class="op-btn op-btn-primary">Publicar</button>
+            <button type="button" class="ui-btn ui-btn-outline ui-btn-sm" data-action="cancel">Cancelar</button>
+            <button type="submit" class="ui-btn ui-btn-primary ui-btn-sm">Publicar</button>
           </div>
         </div>
       </form>
@@ -87,7 +87,7 @@ export function mountForum(root, { me }) {
                 </div>`).join('') : '<p class="op-muted">Aún no hay comentarios.</p>'}
               <form class="forum-reply" data-role="reply" novalidate>
                 <textarea name="body" rows="2" maxlength="5000" placeholder="Escribe un comentario…"></textarea>
-                <button type="submit" class="op-btn op-btn-primary">Comentar</button>
+                <button type="submit" class="ui-btn ui-btn-primary ui-btn-sm">Comentar</button>
               </form>
             </div>` : ''}
         </div>

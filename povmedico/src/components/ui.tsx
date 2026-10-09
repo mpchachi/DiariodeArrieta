@@ -1,6 +1,6 @@
 // Componentes base del panel clínico. Estilo plano (Swiss / shadcn-Square UI): superficies
 // blancas con filete de 1 px, sin sombras en reposo, sin bordes de color, una sola
-// tipografía (Figtree) y cifras tabulares. El color se reserva para los datos.
+// tipografía (Inter, como la plataforma) y cifras tabulares. El color se reserva para los datos.
 import type { ReactNode, SVGProps } from 'react';
 
 export function PageHeader({ title, description, actions, back }: { title: ReactNode; description?: ReactNode; actions?: ReactNode; back?: ReactNode }) {
@@ -92,7 +92,7 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
 }
 
 export const btn = {
-  primary: 'inline-flex items-center gap-2 h-9 px-4 rounded-[10px] bg-accent text-[oklch(98%_0.004_80)] text-[14px] font-medium hover:opacity-90 transition-opacity no-underline cursor-pointer',
+  primary: 'inline-flex items-center gap-2 h-9 px-4 rounded-[10px] bg-accent text-[oklch(0.984_0.003_247.858)] text-[14px] font-medium hover:opacity-90 transition-opacity no-underline cursor-pointer',
   secondary: 'inline-flex items-center gap-2 h-9 px-4 rounded-[10px] border border-clay-border bg-clay-surface text-txt text-[14px] font-medium hover:bg-clay-surface-hover transition-colors no-underline cursor-pointer',
   ghost: 'inline-flex items-center gap-1.5 h-8 px-2 -ml-2 rounded-[8px] text-[14px] text-txt-secondary hover:text-txt hover:bg-clay-surface-hover transition-colors no-underline cursor-pointer',
 };

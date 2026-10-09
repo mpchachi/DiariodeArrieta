@@ -1,5 +1,6 @@
 import gsap from 'gsap';
 import { createSubject } from '../database/subjects.js';
+import { mountShell } from './shell.js';
 
 // Alta de paciente: formulario por secciones (título y explicación a la izquierda, campos a
 // la derecha), con selectores de botón en vez de desplegables. Los datos clínicos (solo
@@ -19,19 +20,19 @@ const choice = (name, options, { value = null, required = true } = {}) => `
   </div>`;
 
 export function showCreateSubject(container, onCreated, onCancel) {
-  container.innerHTML = `
-    <div class="op-screen nf-screen">
-      <header class="op-bar">
-        <div class="op-brand"><img src="${import.meta.env.BASE_URL}dashboard/logo.png" alt="" /><span>FixedGap</span></div>
-        <div class="nf-crumbs"><button type="button" class="nf-back" data-action="cancel">Pacientes</button><span aria-hidden="true">/</span><span>Nuevo paciente</span></div>
-      </header>
-      <main class="op-main nf-main">
-        <header class="op-head">
+  // Misma estructura que la lista (barra lateral + cabecera); volver a Pacientes o ir al Foro cancela el alta.
+  const shell = mountShell(container, {
+    active: 'pacientes', crumbs: ['Plataforma', 'Pacientes', 'Nuevo paciente'],
+    onNavigate: tab => { if (tab === 'foro') history.replaceState(null, '', '#foro'); cancel(); },
+  });
+  shell.main.innerHTML = `
+      <div class="ui-page nf-main">
+        <div class="ui-page-head">
           <div>
             <h1>Nuevo paciente</h1>
             <p>Registra a un paciente o a un voluntario sano para el grupo de referencia.</p>
           </div>
-        </header>
+        </div>
 
         <form id="create-subject-form" class="nf-form" novalidate>
           <section class="nf-section">
@@ -117,15 +118,14 @@ export function showCreateSubject(container, onCreated, onCancel) {
 
           <footer class="nf-footer">
             <p id="form-error" class="nf-error" role="alert"></p>
-            <button type="button" class="op-btn op-btn-ghost" data-action="cancel">Cancelar</button>
-            <button type="submit" class="op-btn op-btn-primary nf-submit">Registrar paciente</button>
+            <button type="button" class="ui-btn ui-btn-outline" data-action="cancel">Cancelar</button>
+            <button type="submit" class="ui-btn ui-btn-primary nf-submit">Registrar paciente</button>
           </footer>
         </form>
-      </main>
-    </div>
+      </div>
   `;
 
-  const screen = container.querySelector('.nf-screen');
+  const screen = shell.root;
   const form = document.getElementById('create-subject-form');
   const errorEl = document.getElementById('form-error');
   const btn = form.querySelector('.nf-submit');
@@ -152,9 +152,8 @@ export function showCreateSubject(container, onCreated, onCancel) {
     ageEl.textContent = y >= 1920 && y <= MAX_YEAR ? `${NOW.getFullYear() - y} años` : '\u00a0';
   });
 
-  const cancel = () => gsap.to(screen, { opacity: 0, duration: 0.2, onComplete: onCancel });
+  function cancel() { gsap.to(screen, { opacity: 0, duration: 0.2, onComplete: () => { shell.dispose(); onCancel(); } }); }
   form.querySelectorAll('[data-action="cancel"]').forEach(b => b.addEventListener('click', cancel));
-  container.querySelector('.nf-back').addEventListener('click', cancel);
 
   const fail = (msg, el) => {
     errorEl.textContent = msg;
@@ -201,7 +200,7 @@ export function showCreateSubject(container, onCreated, onCancel) {
     });
 
     if (result.ok) {
-      gsap.to(screen, { opacity: 0, duration: 0.25, onComplete: () => onCreated(result.subject) });
+      gsap.to(screen, { opacity: 0, duration: 0.25, onComplete: () => { shell.dispose(); onCreated(result.subject); } });
     } else {
       btn.disabled = false;
       errorEl.textContent = 'No se ha podido registrar. Revisa la conexión e inténtalo de nuevo.';

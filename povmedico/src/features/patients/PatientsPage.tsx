@@ -54,7 +54,7 @@ export function PatientsPage() {
             <span className="sr-only">Buscar paciente</span>
             <IconSearch className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-txt-muted" />
             <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por nombre o pseudónimo"
-              className="w-full h-9 pl-9 pr-3 rounded-[10px] border border-clay-border bg-clay-surface text-[14px] text-txt placeholder:text-txt-muted outline-none focus:border-clay-border-active focus:ring-2 focus:ring-[oklch(22%_0.012_70/0.08)]" />
+              className="w-full h-9 pl-9 pr-3 rounded-[10px] border border-clay-border bg-clay-surface text-[14px] text-txt placeholder:text-txt-muted outline-none focus:border-clay-border-active focus:ring-2 focus:ring-[oklch(0.704_0.04_256.788/0.5)]" />
           </label>
           <Segmented label="Tipo" value={filter} onChange={setFilter}
             options={[{ value: 'all', label: 'Todos' }, { value: 'patient', label: 'Pacientes' }, { value: 'healthy', label: 'Voluntarios sanos' }]} />

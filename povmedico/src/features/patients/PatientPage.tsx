@@ -160,15 +160,15 @@ function Evolution({ sessions }: { sessions: Session[] }) {
       <div className="h-[280px]" role="img" aria-label={`Evolución de ${m.label}: ${data.map(d => `${shortDate.format(d.ts)} ${fmt(d.value as number)}`).join(', ')}`}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: 4 }}>
-            <CartesianGrid stroke="#E2DFDA" vertical={false} />
+            <CartesianGrid stroke="#E2E8F0" vertical={false} />
             {/* Eje temporal real: la separación entre puntos refleja los días entre sesiones. */}
             <XAxis dataKey="ts" type="number" scale="time" domain={['dataMin', 'dataMax']} padding={{ left: 16, right: 16 }}
-              tickFormatter={(v: number) => shortDate.format(v)} tick={{ fontSize: 12, fill: '#75716B' }} tickLine={false} axisLine={{ stroke: '#E2DFDA' }} />
-            <YAxis tick={{ fontSize: 12, fill: '#75716B' }} tickLine={false} axisLine={false} width={56}
+              tickFormatter={(v: number) => shortDate.format(v)} tick={{ fontSize: 12, fill: '#64748B' }} tickLine={false} axisLine={{ stroke: '#E2E8F0' }} />
+            <YAxis tick={{ fontSize: 12, fill: '#64748B' }} tickLine={false} axisLine={false} width={56}
               tickFormatter={(v: number) => `${v.toLocaleString('es-ES', { maximumFractionDigits: m.decimals })}${m.unit && m.unit !== '°' ? ` ${m.unit}` : m.unit}`} domain={m.text ? [0, 'auto'] : ['auto', 'auto']} allowDecimals={m.decimals > 0} />
             <Tooltip separator=": " formatter={(v: unknown) => [fmt(Number(v)), m.label]} labelFormatter={(_l, p) => (p?.[0] ? fmtDateTime((p[0].payload as { t: string }).t) : '')}
-              contentStyle={{ borderRadius: 10, border: '1px solid #E2DFDA', boxShadow: 'none', fontSize: 13 }} />
-            <ReferenceLine y={first} stroke="#C4C0BA" strokeDasharray="4 4" />
+              contentStyle={{ borderRadius: 10, border: '1px solid #E2E8F0', boxShadow: 'none', fontSize: 13 }} />
+            <ReferenceLine y={first} stroke="#CBD5E1" strokeDasharray="4 4" />
             <Line type="linear" dataKey="value" stroke={CHAPTERS[m.chapter].hex} strokeWidth={2} dot={{ r: 3.5, strokeWidth: 0, fill: CHAPTERS[m.chapter].hex }} activeDot={{ r: 5 }} isAnimationActive={false} />
           </LineChart>
         </ResponsiveContainer>
