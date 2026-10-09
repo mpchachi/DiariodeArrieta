@@ -7,8 +7,8 @@ export function showLogin(container, onLoginSuccess) {
   container.innerHTML = `
     <div class="auth-screen login-screen">
       <div class="login-card">
-        <aside class="login-brand" style="--login-photo: url('${base}login-panel.jpg')">
-          <div class="login-logo"><img src="${logo}" alt="" /><span>FixedGap</span></div>
+        <aside class="login-brand">
+          <div class="login-logo"><img src="${logo}" alt="FixedGap" /></div>
           <div class="login-pitch">
             <h2>Telemonitorización motora tras un ictus.</h2>
             <p>Juegos en casa con la cámara del ordenador y métricas objetivas para el equipo clínico.</p>
