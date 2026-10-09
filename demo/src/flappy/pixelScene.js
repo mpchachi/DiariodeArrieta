@@ -9,6 +9,7 @@ import { draw, snap, setPixelScale } from '../pixel/sprite.js';
 import { foxSprites } from '../pixel/fox.js';
 import { BALLOON, balloonSprite, basketSprite, drawFlame, cypressSprite, stormCloudSprite, fistHandSprite } from '../pixel/balloon.js';
 import { glyph, handSprite, panel } from '../pixel/props.js';
+import { createFloaters } from '../feedback/calm.js';
 
 const H = 180, GROUND = 150, CENTER_Y = 86;
 
@@ -22,8 +23,14 @@ export class PixelFlappyScene {
     this.art = createArt(this.ctx, this.view);
     this.season = SEASONS[season] ?? SEASONS[0];
     this.scroll = 0; this.t = 0; this.strength = 0; this.hand = 'missing';
-    this.sparks = []; this.hitShake = new Map();
+    this.sparks = []; this.hitShake = new Map(); this.floaters = createFloaters();
     this.resize();
+  }
+
+  // Acierto: unas chispas suben despacio alrededor del globo.
+  cheer() {
+    if (!this.state) return;
+    this.floaters.spawn(this.sx(C.planeX), this.sy(this.state.planeY), { n: 7, spread: 22 });
   }
 
   setInput({ strength = 0, hand = 'missing' } = {}) { this.strength = Math.max(0, Math.min(1, strength)); this.hand = hand; }
@@ -38,6 +45,7 @@ export class PixelFlappyScene {
     this.state = state;
     for (const p of this.sparks) { p.y += p.vy * dt; p.life -= dt; }
     this.sparks = this.sparks.filter(p => p.life > 0);
+    this.floaters.update(dt);
     this.art.updateParticles(this.season, dt);
   }
 
@@ -58,6 +66,7 @@ export class PixelFlappyScene {
       this.drawBalloon(st);
     }
     for (const p of this.sparks) { ctx.fillStyle = p.life > 0.2 ? '#ffd84a' : '#ff8a3a'; ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1); }
+    this.floaters.draw(ctx, this.art.rect);
     this.art.drawParticles(this.t);
     if (st) this.drawHud(st);
   }

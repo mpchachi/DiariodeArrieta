@@ -95,9 +95,12 @@ try {
   await page.clock.runFor(1800);
   assert.equal((await state()).phase, 'playing');
 
-  for (let i = 0; i < 40 && (await state()).phase !== 'done'; i++) {
-    await page.clock.runFor(3000);
-    if (shots && i === 6) await page.screenshot({ path: `${shots}/runner-play2.png` });
+  const praiseOn = () => page.evaluate(() => { const el = document.querySelector('.runner-praise'); return !!el && !el.hidden; });
+  let praiseShot = false;
+  for (let i = 0; i < 240 && (await state()).phase !== 'done'; i++) {
+    await page.clock.runFor(500);
+    if (shots && i === 36) await page.screenshot({ path: `${shots}/runner-play2.png` });
+    if (shots && !praiseShot && await praiseOn()) { praiseShot = true; await page.clock.runFor(250); await page.screenshot({ path: `${shots}/runner-praise.png` }); }
   }
   const end = await state();
   assert.equal(end.phase, 'done');
@@ -109,6 +112,8 @@ try {
   assert.equal(r.tutorial?.gesture, 'pinch'); assert.equal(r.tutorial.jumps, 2);
   assert.ok(r.summary.pinch.cycles >= 4, `ciclos ${r.summary.pinch.cycles}`);
   assert.equal(end.nextSeason, 1);
+  // Feedback tranquilo: un ánimo por tronco superado fuera de la ronda guiada (5 − 2) y ninguno de «casi».
+  assert.equal(await page.evaluate(() => document.querySelector('.runner-praise').dataset.count), '3', 'un ánimo por tronco superado');
   assert.equal(await page.locator('[data-panel=end]').isVisible(), true);
   if (shots) await page.screenshot({ path: `${shots}/runner-end.png` });
   await page.locator('[data-action=next]').click();

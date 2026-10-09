@@ -74,6 +74,9 @@ try {
   assert.ok(r.metrics.activationCount > 5);
   assert.ok(r.metrics.maxFlexion > 0.9 && r.metrics.maxExtension < 0.1);
   assert.equal(r.quality.pauses, 1);
+  // Feedback tranquilo: un ánimo por paso limpio y, si hubo choques, un único «Casi… ¡sigue así!».
+  const cheers = r.summary.columns.cleared + (r.summary.columns.hits > 0 ? 1 : 0);
+  assert.equal(await page.evaluate(() => document.querySelector('.runner-praise').dataset.count), String(cheers), 'ánimos del globo');
   if (shots) await page.screenshot({ path: `${shots}/flappy-end.png` });
   await page.locator('[data-action=done]').click();
   assert.equal(await page.evaluate(() => window.doneResult?.game), 'flappy');

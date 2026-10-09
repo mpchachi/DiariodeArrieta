@@ -16,6 +16,7 @@ import { RunnerCamera } from './camera.js';
 import { FramingTracker } from '../pack/framing.js';
 import { setPixelScale } from '../pixel/sprite.js';
 import { createGestureGuide } from '../tutorial/gestureGuide.js';
+import { createPraise, createFloaters } from '../feedback/calm.js';
 
 const PRE_PLAY = ['title', 'loading', 'setup', 'armed', 'error'];
 
@@ -109,6 +110,7 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
   }).filter(Boolean);
   const audio = createAudio();
   const guide = createGestureGuide(root);
+  const praise = createPraise(root), floaters = createFloaters(); // ánimo tranquilo tras cada tronco
   const course = buildCourse(C);
   const idealOffset = takeoffWindow({ x: 0, w: OBSTACLE.w, h: OBSTACLE.h }, C)?.ideal ?? null;
 
@@ -147,7 +149,7 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     } });
 
   function resetRun() {
-    fox = createFox(); gameMs = 0; scroll = 0; sparkles = []; foxHidden = false;
+    fox = createFox(); gameMs = 0; scroll = 0; sparkles = []; foxHidden = false; floaters.clear(); praise.hide();
     obstacles = course.obstacles.map(o => ({ ...o, hit: false, passed: false }));
     berries = course.berries.map(b => ({ ...b, taken: false }));
     tutorialShown = false; tutorialJumps = 0; tutorialAt = null; tutorialMs = 0; guide.hide();
@@ -310,11 +312,16 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
       if (o.passed) continue;
       if (!o.hit && collides(foxWorld, fox.y, o)) {
         o.hit = true; fox.stumbleMs = C.stumbleMs; fox.vy = Math.min(fox.vy, 0);
-        session?.resolveObstacle(o.id, false); audio.hit();
+        session?.resolveObstacle(o.id, false); audio.hit(); praise.encourage();
       }
       if (foxWorld + FOX_BOX.left > o.x + o.w) {
         o.passed = true;
         session?.resolveObstacle(o.id, !o.hit);
+        // Los troncos de la ronda guiada ya los celebra la guía («¡Eso es!»).
+        if (!o.hit && !(tutorialShown && o.id < tutorialJumps)) {
+          praise.cheer();
+          floaters.spawn(o.x - scroll + o.w / 2, groundY - 14, { colors: ['#ffe9a8', '#ffffff', '#b5dd7a'] });
+        }
       }
     }
     for (const b of berries) {
@@ -418,6 +425,7 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
         stumble: fox.stumbleMs > 0, landing: fox.landMs > 0, t });
     }
     art.sparkles(sparkles);
+    floaters.draw(ctx, art.rect);
     art.drawParticles(t);
     if (active) {
       const total = finishX - C.foxX;
@@ -444,6 +452,7 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     if (phase === 'setup' && !lastFrame) updateSetup();
     for (const p of sparkles) { p.x += p.vx * dt / 1000; p.y += p.vy * dt / 1000; p.vy += 120 * dt / 1000; p.life -= dt / 1000; }
     sparkles = sparkles.filter(p => p.life > 0);
+    if (phase !== 'paused') floaters.update(dt / 1000);
     render(dt);
     drawDebug();
   }
@@ -508,7 +517,7 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     disposed = true;
     clearInterval(countdownTimer);
     if (raf !== null) cancelAnimationFrame(raf);
-    camera.stop(); audio.close(); guide.dispose();
+    camera.stop(); audio.close(); guide.dispose(); praise.dispose();
     document.removeEventListener('keydown', keydown);
     window.removeEventListener('resize', fit);
   }

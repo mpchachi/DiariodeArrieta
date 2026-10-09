@@ -18,6 +18,7 @@ import { createAudio } from '../runner/audio.js';
 import { SEASONS } from '../pixel/seasons.js';
 import { FramingTracker } from '../pack/framing.js';
 import { createGestureGuide } from '../tutorial/gestureGuide.js';
+import { createPraise } from '../feedback/calm.js';
 
 const SESSIONS_KEY = 'fixedgap_flappy_sessions';
 
@@ -71,6 +72,7 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
   const engine = new FlappyEngine(C);
   const audio = createAudio();
   const guide = createGestureGuide(root);
+  const praise = createPraise(root); // ánimo tranquilo tras cada paso superado
   const framing = new FramingTracker();
   // Siempre la mano derecha del paciente (ver RUNNER_CONFIG.detectedHandLabel).
   const hand = RUNNER_CONFIG.detectedHandLabel;
@@ -165,9 +167,9 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
         for (const id of ev.passed) {
           const col = engine.state.columns.find(c => c.id === id);
           session.column(id, { passed: true, hit: col.hit });
-          if (!col.hit) audio.berry();
+          if (!col.hit) { audio.berry(); praise.cheer(); scene.cheer(); }
         }
-        if (ev.hit !== null) { session.column(ev.hit, { hit: true }); audio.hit(); }
+        if (ev.hit !== null) { session.column(ev.hit, { hit: true }); audio.hit(); praise.encourage(); }
         if (ev.floor) session.floor();
         if (ev.finished) finish(true);
         if (playMs > 9000 && playMs < 9100 && !engine.state.columns[0].passed) bubble('Abre la mano para bajar', 4000);
@@ -222,7 +224,7 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
     if (disposed) return;
     disposed = true;
     if (raf !== null) cancelAnimationFrame(raf);
-    camera.stop(); scene.dispose(); audio.close(); guide.dispose();
+    camera.stop(); scene.dispose(); audio.close(); guide.dispose(); praise.dispose();
     window.removeEventListener('resize', onResize);
     document.removeEventListener('keydown', keydown);
   }
