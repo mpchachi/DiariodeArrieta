@@ -19,6 +19,7 @@ import { SEASONS } from '../pixel/seasons.js';
 import { FramingTracker } from '../pack/framing.js';
 import { createGestureGuide } from '../tutorial/gestureGuide.js';
 import { createPraise } from '../feedback/calm.js';
+import { ReliabilityMeter } from '../vision/reliability.js';
 
 const SESSIONS_KEY = 'fixedgap_flappy_sessions';
 
@@ -74,6 +75,7 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
   const guide = createGestureGuide(root);
   const praise = createPraise(root); // ánimo tranquilo tras cada paso superado
   const framing = new FramingTracker();
+  const reliability = new ReliabilityMeter(); // fiabilidad de las medidas de la partida
   // Siempre la mano derecha del paciente (ver RUNNER_CONFIG.detectedHandLabel).
   const hand = RUNNER_CONFIG.detectedHandLabel;
   const selector = new HandSelector(hand, RUNNER_CONFIG.pinch);
@@ -103,8 +105,10 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
     strength = fist?.strength ?? 0;
     const now = performance.now();
     if (picked) { lastTrackedWall = now; trackedSince ??= now; } else trackedSince = null;
+    if (session && (phase === 'playing' || phase === 'paused')) reliability.add({ reason: sel.reason, handsInFrame: frame.hands?.length ?? 0, hint, hand: sel.hand, width: frame.width, height: frame.height });
     session?.log(frame.t, engine.state.status === 'playing' && phase === 'playing' ? 'playing' : phase,
-      { fistStrength: strength, averageRatio: fist?.averageRatio, legacyStrength: fist?.legacyStrength ?? fist?.strength, planeY: engine.state.planeY, tracked: !!picked });
+      { fistStrength: strength, averageRatio: fist?.averageRatio, legacyStrength: fist?.legacyStrength ?? fist?.strength, planeY: engine.state.planeY, tracked: !!picked,
+        flexDeg: curl?.valid ? curl.fingers.reduce((a, f) => a + f.mcp + f.pip + f.dip, 0) / curl.fingers.length : null });
   }
 
   function bubble(text, ms) { setText(role('bubble'), text); role('bubble').hidden = false; bubbleUntil = performance.now() + ms; }
@@ -129,6 +133,7 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
     result = session.finish(lastFrame?.t ?? session.start, completed, engine.state);
     result.season = season;
     result.tutorial = tutorialAt !== null ? { gesture: 'fist', shownMs: Math.round(tutorialMs) } : null;
+    result.quality.reliability = reliability.summary();
     storeSession(result, SESSIONS_KEY);
     camera.stop();
     if (completed) audio.finish();

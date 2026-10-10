@@ -96,3 +96,16 @@ test('puño 3D: solo sube con puño real, no al doblar solo nudillos o solo fala
   const half = measureFistCurl(worldHand([45, 50, 40])).strength;
   assert.ok(half > 0.1 && half < 0.8, `medio cerrado ${half}`);
 });
+
+test('globo: flexión real de los dedos en grados, sin el recorte de la señal de control', async () => {
+  const { fingerFlexionSummary } = await import('./session.js');
+  // Ciclos abrir (≈ 60°) – cerrar (≈ 230°): la fuerza del juego se satura en 0 y 1, los grados no.
+  const frames = Array.from({ length: 300 }, (_, i) => ({ phase: 'playing', flexDeg: 145 + 85 * Math.sin(i / 10) }));
+  const f = fingerFlexionSummary(frames);
+  assert.ok(f.maxDeg > 220 && f.maxDeg <= 230, `máx ${f.maxDeg}`);
+  assert.ok(f.minDeg >= 60 && f.minDeg < 70, `mín ${f.minDeg}`);
+  assert.equal(f.arcDeg, Math.round((f.maxDeg - f.minDeg) * 10) / 10);
+  // Un fotograma suelto absurdo no cambia el resultado (percentiles 95/5).
+  assert.ok(Math.abs(fingerFlexionSummary([...frames, { phase: 'playing', flexDeg: 400 }]).maxDeg - f.maxDeg) < 1);
+  assert.equal(fingerFlexionSummary(frames.slice(0, 5)), null);
+});

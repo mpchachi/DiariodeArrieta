@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import type { Patient, Session } from '../../data/types';
 import { getPatient, getSessions } from '../../data/api';
-import { CHAPTERS, CHAPTER_ORDER, MEASURES, QUALITY_MEASURE, measuresOf, formatValue, formatDelta, chapterRow, repetitions, PALM_MM, type ChapterKey, type Measure, type Row } from '../../data/measures';
+import { CHAPTERS, CHAPTER_ORDER, MEASURES, QUALITY_MEASURE, RELIABILITY_LABEL, reliabilityOf, reliabilityReasons, sessionReliability, measuresOf, formatValue, formatDelta, chapterRow, repetitions, PALM_MM, type ChapterKey, type Measure, type Row } from '../../data/measures';
 import { PageHeader, Panel, Badge, Empty, btn, IconArrowLeft, IconPrinter, IconChevronDown, IconChevronRight, IconAlert, IconPlay } from '../../components/ui';
 import { SEX, MOBILITY, TypeBadge, fmtDate, fmtDateTime, fmtAgo, byDate, sessionTime, daysSince, QUALITY_MIN } from './shared';
 
@@ -71,14 +71,23 @@ export function PatientPage() {
 // ── Última sesión ──
 function LastSession({ last, prev }: { last: Session; prev?: Session }) {
   const q = last.qualityPct;
+  const rel = sessionReliability(last);
   return (
     <Panel
       title="Última sesión"
       description={<>{fmtDateTime(sessionTime(last))} · {fmtAgo(sessionTime(last))} · {handLabel(last.handUsed)} · {totalMinutes(last).toFixed(1).replace('.', ',')} min de juego</>}
-      actions={q != null && <Badge tone={q < QUALITY_MIN ? 'warning' : 'neutral'} icon={q < QUALITY_MIN ? <IconAlert className="size-3" /> : undefined}>Seguimiento {Math.round(q)} %</Badge>}
+      actions={<div className="flex flex-wrap gap-1.5">
+        {q != null && <Badge tone={q < QUALITY_MIN ? 'warning' : 'neutral'} icon={q < QUALITY_MIN ? <IconAlert className="size-3" /> : undefined}>Mano detectada {Math.round(q)} %</Badge>}
+        {rel && <Badge tone={rel === 'low' ? 'warning' : 'neutral'} icon={rel !== 'high' ? <IconAlert className="size-3" /> : undefined}>{RELIABILITY_LABEL[rel]}</Badge>}
+      </div>}
     >
       {q != null && q < QUALITY_MIN && (
         <p className="mb-4 text-[13px] text-txt-secondary">La mano se detectó solo el {Math.round(q)} % del tiempo: interpreta estas cifras con cautela (encuadre, luz o mano fuera de cámara).</p>
+      )}
+      {rel && rel !== 'high' && (
+        <p className="mb-4 text-[13px] text-txt-secondary">
+          {RELIABILITY_LABEL[rel]}: {[...new Set(CHAPTER_ORDER.flatMap(c => { const r = reliabilityOf(chapterRow(last, c)); return r ? reliabilityReasons(r) : []; }))].join('; ')}. Interpreta estas cifras con cautela.
+        </p>
       )}
       <div className="grid gap-4 lg:grid-cols-3">
         {CHAPTER_ORDER.map(c => <ChapterSummary key={c} chapter={c} row={chapterRow(last, c)} prevRow={prev ? chapterRow(prev, c) : null} />)}
@@ -192,7 +201,7 @@ function SessionsList({ sessions }: { sessions: Session[] }) {
             <th className="font-medium px-4 py-2.5">Mano</th>
             <th className="font-medium px-4 py-2.5">Capítulos</th>
             <th className="font-medium px-4 py-2.5 text-right">Duración</th>
-            <th className="font-medium px-4 py-2.5 text-right">Seguimiento</th>
+            <th className="font-medium px-4 py-2.5 text-right">Mano detectada</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-clay-border">
@@ -231,8 +240,9 @@ export function SessionDetail({ s }: { s: Session }) {
             <div className="px-4 py-3 border-b border-clay-border flex items-center gap-2">
               <span className="size-2 rounded-full" style={{ background: ch.colorVar }} aria-hidden />
               <p className="text-[14px] font-semibold">{ch.title}</p>
-              {row && <p className="ml-auto text-[12px] text-txt-muted tabular-nums">{Math.round(((row.duration_ms as number) || 0) / 1000)} s · seguimiento {QUALITY_MEASURE.read(row) === null ? '—' : `${Math.round(QUALITY_MEASURE.read(row) as number)} %`}</p>}
+              {row && <p className="ml-auto text-[12px] text-txt-muted tabular-nums">{Math.round(((row.duration_ms as number) || 0) / 1000)} s · mano detectada {QUALITY_MEASURE.read(row) === null ? '—' : `${Math.round(QUALITY_MEASURE.read(row) as number)} %`}</p>}
             </div>
+            {row && <ReliabilityLine row={row} />}
             {!row ? <p className="px-4 py-4 text-[13px] text-txt-muted">No se jugó.</p> : (
               <>
                 <dl className="divide-y divide-clay-border">
@@ -286,5 +296,18 @@ function Repetitions({ chapter, row }: { chapter: ChapterKey; row: Row }) {
         <table className="w-full text-[13px]"><thead>{head(cols)}</thead><tbody className="divide-y divide-clay-border">{body}</tbody></table>
       </div>
     </details>
+  );
+}
+
+// Fiabilidad de un capítulo: nivel y sus tres componentes (solo en partidas nuevas).
+function ReliabilityLine({ row }: { row: Row }) {
+  const r = reliabilityOf(row);
+  if (!r) return null;
+  const n = (v: number | null) => (v == null ? '—' : `${Math.round(v)} %`);
+  return (
+    <p className="px-4 py-2 border-b border-clay-border text-[12px] text-txt-muted" title={reliabilityReasons(r).join('; ') || 'Sin incidencias'}>
+      <span className={r.level === 'low' ? 'text-alert font-medium' : 'text-txt font-medium'}>{RELIABILITY_LABEL[r.level]}</span>
+      {' · '}descartadas {n(r.rejectedPct)} · encuadre correcto {n(r.framingOkPct)}
+    </p>
   );
 }

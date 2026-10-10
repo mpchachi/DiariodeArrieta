@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import type { Patient, Session } from '../../data/types';
 import { getPatient, getSessions } from '../../data/api';
-import { CHAPTERS, CHAPTER_ORDER, measuresOf, formatValue, formatDelta, chapterRow } from '../../data/measures';
+import { CHAPTERS, CHAPTER_ORDER, measuresOf, formatValue, formatDelta, chapterRow, sessionReliability, RELIABILITY_LABEL } from '../../data/measures';
 import { Panel, Empty, btn, IconArrowLeft, IconPrinter } from '../../components/ui';
 import { SEX, MOBILITY, fmtDate, fmtDateTime, byDate, sessionTime, daysSince } from '../patients/shared';
 
@@ -53,7 +53,8 @@ export function PatientReport() {
           <h2 className="text-[16px] font-semibold">Última sesión · {fmtDateTime(sessionTime(last))}</h2>
           <p className="text-[13px] text-txt-muted mt-0.5">
             {last.handUsed === 'left' ? 'Mano izquierda' : 'Mano derecha'}
-            {last.qualityPct != null && ` · seguimiento de la mano ${Math.round(last.qualityPct)} %`}
+            {last.qualityPct != null && ` · mano detectada ${Math.round(last.qualityPct)} %`}
+            {sessionReliability(last) && ` · ${RELIABILITY_LABEL[sessionReliability(last)!].toLowerCase()}`}
             {sessions.length > 1 && ` · cambio respecto a la primera sesión (${fmtDate(sessionTime(first))})`}
           </p>
           {CHAPTER_ORDER.map(c => {
@@ -86,7 +87,7 @@ export function PatientReport() {
         <section className="py-6 border-t border-clay-border break-inside-avoid">
           <h2 className="text-[16px] font-semibold">Sesiones</h2>
           <table className="mt-2 w-full text-[13px]">
-            <thead><tr className="text-left text-txt-muted"><th className="font-medium py-1.5">Fecha</th><th className="font-medium py-1.5">Mano</th><th className="font-medium py-1.5">Ejercicios</th><th className="font-medium py-1.5 text-right">Seguimiento</th></tr></thead>
+            <thead><tr className="text-left text-txt-muted"><th className="font-medium py-1.5">Fecha</th><th className="font-medium py-1.5">Mano</th><th className="font-medium py-1.5">Ejercicios</th><th className="font-medium py-1.5 text-right">Mano detectada</th></tr></thead>
             <tbody className="divide-y divide-clay-border border-y border-clay-border">
               {[...sessions].reverse().map(s => (
                 <tr key={s.id}>

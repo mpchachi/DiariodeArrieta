@@ -128,6 +128,7 @@ export function runnerRow(r) {
       completed: !!r.completed, obstacles: s.obstacles,
       incompleteOpenings: p.incompleteOpenings ?? null, openingsMeasured: p.openingsMeasured ?? null,
       timingMedianAbsErrorMs: s.timing?.medianAbsErrorMs ?? null, medianHoldMs: p.medianHoldMs ?? null,
+      reliability: r.quality?.reliability ?? null,
     },
     repetitions: cycles.map((c, i) => ({ index: i, opening_palm: round(c.openingPalm, 3), full_open: c.fullOpen ?? null,
       closing_ms: round(c.closingMs, 0), hold_ms: round(c.holdMs, 0), duration_ms: round(c.durationMs, 0), amplitude_palm: round(c.amplitude, 3) })),
@@ -162,8 +163,11 @@ export function flappyRow(r) {
       fatigueIndex: round(clamp((m.fatigueIndex ?? 0) * 100, -100, 100), 1),
       smoothnessJerk: round(subs === null ? 0 : clamp(subs - 1, 0, 6), 2),
     },
+    // Arco real de los dedos (°): el dashboard muestra esto, no la señal de control (que se satura).
+    rom_deg_p90: s.fingerFlexion?.arcDeg ?? null,
     outcome: { completed: !!r.completed, columns: s.columns ?? null, floorTouches: s.floorTouches ?? null,
-      activations: m.activationCount ?? 0, rawJerk: round(m.smoothnessJerk, 1) },
+      activations: m.activationCount ?? 0, rawJerk: round(m.smoothnessJerk, 1), fingerFlexion: s.fingerFlexion ?? null,
+      reliability: r.quality?.reliability ?? null },
     repetitions: (r.columns || []).map(c => ({ index: c.id, passed: !!c.passed, hit: !!c.hit })),
   };
 }
@@ -213,7 +217,7 @@ export function gardenRow(r) {
     },
     outcome: { completed: !!r.completed, flowersBloomed: s.flowersBloomed, flowersTotal: s.flowersTotal, hand: r.hand ?? null,
       adapted: !!s.adapted, finalPourStartDeg: s.finalPourStartDeg ?? null, compensationFlowers: s.compensationFlowers ?? null,
-      wrongDirectionFlowers: wrong, maxWrongDirectionDeg: round(maxSup, 1) },
+      wrongDirectionFlowers: wrong, maxWrongDirectionDeg: round(maxSup, 1), reliability: r.quality?.reliability ?? null },
     repetitions: flowers.map(f => ({ index: f.index, kind: f.kind, peak_tilt_deg: f.peakTiltDeg, peak_opposite_deg: f.peakOppositeDeg,
       time_to_bloom_ms: f.timeToBloomMs, return_ms: f.returnMs, peak_velocity_out: f.peakVelocityOutDegS, peak_velocity_back: f.peakVelocityBackDegS })),
   };

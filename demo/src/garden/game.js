@@ -11,6 +11,7 @@ import { GARDEN_CONFIG as C } from './config.js';
 import { knuckleTilt, TiltFilter } from './tilt.js';
 import { GardenEngine } from './engine.js';
 import { GardenScene } from './scene.js';
+import { ReliabilityMeter } from '../vision/reliability.js';
 import { summarize } from './session.js';
 import { flowerName } from '../pixel/garden.js';
 import { RunnerCamera } from '../runner/camera.js';
@@ -79,6 +80,7 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
   const audio = createAudio();
   const guide = createGestureGuide(root);
   const framing = new FramingTracker();
+  const reliability = new ReliabilityMeter(); // fiabilidad de las medidas de la partida
   const tracker = new HandTracker();
   const smoother = new HandSmoother({ emaAlpha: 0.6, maxLostFrames: 8 });
   const filter = new TiltFilter(C.tiltAlpha, C.minQuality);
@@ -104,6 +106,7 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
     attempted++;
     // Siempre la misma mano (la otra o la de otra persona no roban el control).
     const sel = tracker.select(frame), picked = sel.hand;
+    reliability.add({ reason: sel.reason, handsInFrame: frame.hands?.length ?? 0, hint, hand: sel.hand, width: frame.width, height: frame.height });
     if (sel.switched) { smoother.reset(); filter.reset(); }
     const pts = smoother.smooth(picked?.landmarks ?? null);
     raw = pts ? knuckleTilt(pts, frame.width, frame.height) : null;
@@ -158,7 +161,7 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
     if (result) return;
     result = summarize(engine, { subjectId, hand, season, completed,
       durationMs: startedAt !== null ? Math.round(lastCamT - startedAt) : null,
-      quality: { trackedCoverage: attempted ? Math.round(tracked / attempted * 1000) / 1000 : 0, pauses, pausedMs: Math.round(pausedMs) } });
+      quality: { trackedCoverage: attempted ? Math.round(tracked / attempted * 1000) / 1000 : 0, pauses, pausedMs: Math.round(pausedMs), reliability: reliability.summary() } });
     result.tutorial = tutorialAt !== null ? { steps: ['grip', 'tilt'], shownMs: Math.round(tutorialMs) } : null;
     storeSession(result, SESSIONS_KEY);
     camera.stop();

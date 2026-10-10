@@ -44,7 +44,7 @@ export function PatientsPage() {
           <Stat label="Pacientes" value={rows.filter(r => r.p.subjectType === 'patient').length} />
           <Stat label="Voluntarios sanos" value={rows.filter(r => r.p.subjectType === 'healthy').length} hint="Grupo de referencia" />
           <Stat label="Sesiones en los últimos 7 días" value={week} />
-          <Stat label="Con avisos en la última sesión" value={withNotices} hint="Seguimiento bajo o viaje incompleto" />
+          <Stat label="Con avisos en la última sesión" value={withNotices} hint="Mano poco detectada, fiabilidad baja o viaje incompleto" />
         </div>
       )}
 
@@ -82,7 +82,7 @@ export function PatientsPage() {
                   <th className="font-medium px-4 py-2.5">Tipo</th>
                   <th className="font-medium px-4 py-2.5 text-right">Sesiones</th>
                   <th className="font-medium px-4 py-2.5">Última sesión</th>
-                  <th className="font-medium px-4 py-2.5 text-right">Calidad</th>
+                  <th className="font-medium px-4 py-2.5 text-right">Mano detectada</th>
                   <th className="font-medium px-4 py-2.5">Avisos</th>
                   <th className="w-10" />
                 </tr>

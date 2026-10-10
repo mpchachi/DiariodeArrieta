@@ -278,3 +278,8 @@ Pendiente / bugs vistos en el portátil de Mateo (Chrome, cámara real):
 - Evolución solo con ≥ 2 sesiones; eje temporal real; línea discontinua = primera sesión.
 - Estilo: plano (Square UI / Swiss), Figtree, filetes de 1 px, sin sombras ni bordes de color (`components/ui.tsx`).
 - `src/domain/scores.test.ts` tiene 6 fallos previos (índice compuesto antiguo, ya sin uso en la UI).
+
+2026-10-10, fiabilidad de las medidas y escala del globo:
+- «Calidad del seguimiento» pasa a llamarse **Mano detectada** (es solo el % de fotogramas con la mano vista).
+- Nueva **fiabilidad** por capítulo (`demo/src/vision/reliability.js`, guardada en `game_results.outcome.reliability`): % mano detectada, % descartadas (había mano pero forma imposible/salto) y % encuadre correcto; nivel alta/media/baja con umbrales internos (90/5/80 y 75/15/50). «Demasiado lejos» se decide por el tamaño de la palma (los puños tienen la caja más baja). Partidas anteriores al 10/10/2026 no la tienen.
+- Globo: los % de apertura/cierre salían de la señal de control del juego (recortada) y se saturaban en 100 %. Ahora se guarda la flexión real de los dedos en grados (media de los 4 dedos de MCF+IFP+IFD, landmarks 3D, percentiles 95/5): `outcome.fingerFlexion` {maxDeg, minDeg, arcDeg} y `rom_deg_p90` = arco. El dashboard muestra eso; ya no muestra apertura/cierre % ni la fatiga del globo.

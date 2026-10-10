@@ -1,4 +1,5 @@
 import { CHAPTERS, CHAPTER_ORDER, measuresOf, QUALITY_MEASURE } from '../../data/measures';
+import { RELIABILITY } from '../../data/reliabilityCriteria';
 import { PageHeader, Panel } from '../../components/ui';
 import { QUALITY_MIN, INACTIVE_DAYS } from '../patients/shared';
 
@@ -70,10 +71,24 @@ export function ExercisesGuide() {
           );
         })}
 
+        <Panel title="Fiabilidad de cada partida">
+          <p className="text-[14px] text-txt-secondary mb-2">Que la mano se vea no garantiza que las medidas sean exactas. Por eso cada ejercicio indica su fiabilidad a partir de tres datos, contados fotograma a fotograma mientras se juega:</p>
+          <ul className="list-disc pl-5 space-y-1.5 text-[14px] text-txt-secondary">
+            <li><strong className="font-semibold text-txt">Mano detectada:</strong> fotogramas con la mano válida y seguida.</li>
+            <li><strong className="font-semibold text-txt">Descartadas:</strong> fotogramas en los que había una mano pero se descartó por tener una forma imposible, dar un salto brusco o cambiar de mano un instante.</li>
+            <li><strong className="font-semibold text-txt">Encuadre correcto:</strong> de los fotogramas con mano, los que no estaban demasiado cerca, lejos, en un borde o con poca luz.</li>
+          </ul>
+          <p className="mt-3 text-[13px] text-txt-muted">
+            Criterio interno de FixedGap (no es un estándar): <strong className="font-medium text-txt">alta</strong> si la mano se detecta al menos el {RELIABILITY.high.detected} % del tiempo, se descarta como mucho el {RELIABILITY.high.rejected} % y el encuadre es correcto al menos el {RELIABILITY.high.framing} %;{' '}
+            <strong className="font-medium text-txt">baja</strong> si la detección baja del {RELIABILITY.low.detected} %, los descartes pasan del {RELIABILITY.low.rejected} % o el encuadre baja del {RELIABILITY.low.framing} %; <strong className="font-medium text-txt">media</strong> en el resto. Las partidas anteriores al 10 de octubre de 2026 no tienen este dato.
+          </p>
+        </Panel>
+
         <Panel title="Avisos de la lista de pacientes">
           <p className="text-[14px] text-txt-secondary mb-2">Son avisos sobre la calidad o la regularidad de los datos, no alertas clínicas:</p>
           <ul className="list-disc pl-5 space-y-1.5 text-[14px] text-txt-secondary">
-            <li><strong className="font-semibold text-txt">Seguimiento bajo:</strong> la mano se detectó menos del {QUALITY_MIN} % del tiempo en la última sesión.</li>
+            <li><strong className="font-semibold text-txt">Mano poco detectada:</strong> la mano se vio menos del {QUALITY_MIN} % del tiempo en la última sesión.</li>
+            <li><strong className="font-semibold text-txt">Fiabilidad baja:</strong> en algún ejercicio de la última sesión la detección fue inestable o la mano estuvo mal encuadrada (ver abajo).</li>
             <li><strong className="font-semibold text-txt">Viaje incompleto:</strong> se saltó o no se terminó algún ejercicio.</li>
             <li><strong className="font-semibold text-txt">Días sin jugar:</strong> han pasado más de {INACTIVE_DAYS} días desde la última sesión.</li>
           </ul>

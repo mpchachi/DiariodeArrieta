@@ -29,18 +29,30 @@ export function processFlappyMetrics(frames, C = FLAPPY_CONFIG.fist) {
   return { maxExtension: Math.min(...s), maxFlexion: Math.max(...s), activationCount, fatigueIndex, smoothnessJerk: totalJerk / active.length };
 }
 
+// Flexión real de los dedos (sin el recorte de la señal de control del juego): por fotograma,
+// media de los 4 dedos de MCF + IFP + IFD en grados (landmarks 3D de MediaPipe, estimación).
+// Percentiles 95 y 5 de la partida para que un fotograma suelto no marque el máximo o el mínimo.
+const quantile = (sorted, q) => { const i = (sorted.length - 1) * q, lo = Math.floor(i), hi = Math.ceil(i); return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo); };
+export function fingerFlexionSummary(frames) {
+  const v = frames.filter(f => f.phase === 'playing' && Number.isFinite(f.flexDeg)).map(f => f.flexDeg).sort((a, b) => a - b);
+  if (v.length < 10) return null;
+  const maxDeg = quantile(v, 0.95), minDeg = quantile(v, 0.05);
+  return { maxDeg: round(maxDeg, 1), minDeg: round(minDeg, 1), arcDeg: round(maxDeg - minDeg, 1), frames: v.length };
+}
+
 export class FlappySession {
   constructor({ hand = null, subjectId = null, startedAt = 0, C = FLAPPY_CONFIG }) {
     this.C = C; this.hand = hand; this.subjectId = subjectId; this.start = startedAt;
     this.frames = []; this.columns = new Map(); this.pauses = []; this.floorTouches = 0;
     this.trackedFrames = 0; this.attemptedFrames = 0;
   }
-  log(t, phase, { fistStrength = null, averageRatio = null, legacyStrength = null, planeY = null, tracked = false } = {}) {
+  log(t, phase, { fistStrength = null, averageRatio = null, legacyStrength = null, planeY = null, tracked = false, flexDeg = null } = {}) {
     this.attemptedFrames++;
     if (tracked) this.trackedFrames++;
     if (this.frames.length < 20000) {
       this.frames.push({ timestamp: round(t - this.start, 1), phase, fistStrength: tracked ? round(fistStrength, 4) : undefined,
-        averageRatio: tracked ? round(averageRatio, 4) : null, legacyStrength: tracked ? round(legacyStrength, 4) : null, planeY: round(planeY, 3) });
+        averageRatio: tracked ? round(averageRatio, 4) : null, legacyStrength: tracked ? round(legacyStrength, 4) : null, planeY: round(planeY, 3),
+        flexDeg: tracked ? round(flexDeg, 1) : null });
     }
   }
   column(id, patch) { this.columns.set(id, { id, ...this.columns.get(id), ...patch }); }
@@ -60,6 +72,7 @@ export class FlappySession {
       summary: {
         columns: { total, passed: cols.filter(c => c.passed).length, cleared: cols.filter(c => c.passed && !c.hit).length, hits: engineState.hits },
         floorTouches: this.floorTouches,
+        fingerFlexion: fingerFlexionSummary(this.frames),
       },
       quality: { trackedCoverage: round(coverage), pauses: this.pauses.length, sufficient: coverage >= 0.85 },
       clinicalScore: null,

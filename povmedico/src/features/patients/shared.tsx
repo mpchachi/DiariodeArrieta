@@ -1,4 +1,5 @@
 import type { Patient, Session } from '../../data/types';
+import { sessionReliability } from '../../data/measures';
 import { Badge, IconAlert } from '../../components/ui';
 
 export const SEX = (s: Patient['sex']) => (s === 'M' ? 'Hombre' : s === 'F' ? 'Mujer' : 'Otro');
@@ -25,7 +26,8 @@ export function notices(sessions: Session[]): { tone: 'warning' | 'neutral'; tex
   const last = sessions[sessions.length - 1];
   if (!last) return [{ tone: 'neutral', text: 'Sin sesiones' }];
   const out: { tone: 'warning' | 'neutral'; text: string }[] = [];
-  if (last.qualityPct != null && last.qualityPct < QUALITY_MIN) out.push({ tone: 'warning', text: `Seguimiento bajo (${Math.round(last.qualityPct)} %)` });
+  if (last.qualityPct != null && last.qualityPct < QUALITY_MIN) out.push({ tone: 'warning', text: `Mano poco detectada (${Math.round(last.qualityPct)} %)` });
+  if (sessionReliability(last) === 'low') out.push({ tone: 'warning', text: 'Fiabilidad baja' });
   if (last.completed === false) out.push({ tone: 'warning', text: 'Viaje incompleto' });
   const d = daysSince(sessionTime(last));
   if (d !== null && d > INACTIVE_DAYS) out.push({ tone: 'neutral', text: `${d} días sin jugar` });

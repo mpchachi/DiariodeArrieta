@@ -17,6 +17,7 @@ import { FramingTracker } from '../pack/framing.js';
 import { setPixelScale } from '../pixel/sprite.js';
 import { createGestureGuide } from '../tutorial/gestureGuide.js';
 import { createPraise, createFloaters } from '../feedback/calm.js';
+import { ReliabilityMeter } from '../vision/reliability.js';
 
 const PRE_PLAY = ['title', 'loading', 'setup', 'armed', 'error'];
 
@@ -117,6 +118,7 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
   const hand = C.detectedHandLabel;
   const selector = new HandSelector(hand, C.pinch), controller = new PinchController(C.pinch);
   const framing = new FramingTracker(); // por qué se pierde la mano (cerca, borde, luz)
+  const reliability = new ReliabilityMeter(); // fiabilidad de las medidas de la partida
   let season = getSeason(subjectId), nextSeason = season, seasonBlend = 0;
   let phase = 'title', disposed = false, raf = null, lastWall = performance.now(), t = 0;
   let measurement = { valid: false, eligible: false, ratio: null, reason: 'missing' };
@@ -149,7 +151,7 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     } });
 
   function resetRun() {
-    fox = createFox(); gameMs = 0; scroll = 0; sparkles = []; foxHidden = false; floaters.clear(); praise.hide();
+    fox = createFox(); gameMs = 0; scroll = 0; sparkles = []; foxHidden = false; floaters.clear(); praise.hide(); reliability.reset();
     obstacles = course.obstacles.map(o => ({ ...o, hit: false, passed: false }));
     berries = course.berries.map(b => ({ ...b, taken: false }));
     tutorialShown = false; tutorialJumps = 0; tutorialAt = null; tutorialMs = 0; guide.hide();
@@ -216,7 +218,7 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
   function receive(frame) {
     if (disposed) return;
     lastFrame = frame; lastFrameWall = performance.now();
-    framing.update(frame);
+    const hint = framing.update(frame);
     frameTimes.push(frame.t); if (frameTimes.length > 60) frameTimes.shift();
     const span = frameTimes.at(-1) - frameTimes[0];
     fps = span > 0 ? (frameTimes.length - 1) * 1000 / span : 0;
@@ -227,7 +229,10 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     if (C.pinch.strictQuality && span >= 1000 && fps < C.pinch.minCaptureFps) measurement = { valid: false, eligible: false, ratio: null, reason: 'slow' };
     pinchState = controller.update(measurement, frame.t);
     if (pinchState.ready) lastReadyWall = lastFrameWall;
-    if (session && ['playing', 'tutorial', 'paused', 'finishing'].includes(phase)) session.addSample(frame, measurement, pinchState);
+    if (session && ['playing', 'tutorial', 'paused', 'finishing'].includes(phase)) {
+      session.addSample(frame, measurement, pinchState);
+      reliability.add({ reason: selected.reason, handsInFrame: frame.hands?.length ?? 0, hint, hand: selected.hand, width: frame.width, height: frame.height });
+    }
 
     const ev = pinchState.event;
     if (phase === 'setup' || phase === 'armed') updateSetup();
@@ -356,6 +361,7 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     if (!session || result) return;
     result = session.finish(lastFrame?.t ?? session.start, gameMs, completed);
     result.seasonName = SEASONS[season].name;
+    result.quality.reliability = reliability.summary();
     result.tutorial = tutorialShown ? { gesture: 'pinch', jumps: tutorialJumps, obstacleIds: Array.from({ length: tutorialJumps }, (_, i) => i), shownMs: Math.round(tutorialMs) } : null;
     if (completed && !onComplete) nextSeason = advanceSeason(subjectId);
     result.nextSeason = nextSeason;

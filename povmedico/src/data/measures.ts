@@ -153,17 +153,24 @@ export const MEASURES: Measure[] = [
     better: 'higher',
   },
   {
-    id: 'balloon_open', chapter: 'fox_balloon', label: 'Apertura máxima de la mano', unit: '%', decimals: 0, key: true,
-    read: r => num(r.hand_open_pct_p90),
-    meaning: 'Extensión activa de los dedos. 100 % = mano completamente abierta.',
-    how: 'Máxima apertura alcanzada en la partida, a partir de la flexión de cada dedo (MCF + IFP + IFD, landmarks 3D).',
+    id: 'balloon_flex_max', chapter: 'fox_balloon', label: 'Flexión máxima de los dedos', unit: '°', decimals: 0, key: true,
+    read: r => num(obj(outcome(r).fingerFlexion).maxDeg),
+    meaning: 'Cuánto llega a cerrar la mano. Orientativo: un puño completo en una mano sana suma unos 260° (MCF 85° + IFP 110° + IFD 65°); con la cámara suele salir algo menos.',
+    how: 'Por fotograma, media de los 4 dedos de la flexión MCF + IFP + IFD (ángulos 3D estimados por MediaPipe); percentil 95 de la partida.',
     better: 'higher',
   },
   {
-    id: 'balloon_close', chapter: 'fox_balloon', label: 'Cierre máximo del puño', unit: '%', decimals: 0, key: true,
-    read: r => (num(r.hand_open_pct_p10) === null ? null : 100 - (r.hand_open_pct_p10 as number)),
-    meaning: 'Flexión activa de los dedos. 100 % = puño completo (los cuatro dedos doblados).',
-    how: 'Máximo cierre alcanzado, con el mismo cálculo de flexión por dedo.',
+    id: 'balloon_flex_min', chapter: 'fox_balloon', label: 'Flexión residual con la mano abierta', unit: '°', decimals: 0, key: true,
+    read: r => num(obj(outcome(r).fingerFlexion).minDeg),
+    meaning: 'Cuánto quedan doblados los dedos al abrir. 0° = dedos totalmente rectos; con la cámara, una mano sana abierta suele dar menos de 70°.',
+    how: 'Mismo cálculo; percentil 5 de la partida.',
+    better: 'lower',
+  },
+  {
+    id: 'balloon_arc', chapter: 'fox_balloon', label: 'Arco activo de los dedos', unit: '°', decimals: 0, key: true,
+    read: r => num(obj(outcome(r).fingerFlexion).arcDeg),
+    meaning: 'Recorrido entre la mano más abierta y el puño más cerrado: aproximación al movimiento activo total (TAM) medio por dedo.',
+    how: 'Flexión máxima − flexión residual.',
     better: 'higher',
   },
   {
@@ -171,12 +178,6 @@ export const MEASURES: Measure[] = [
     read: r => num(outcome(r).activations) ?? num(r.rep_count),
     meaning: 'Número de cierres completos que hizo el paciente para mantener el globo.',
     how: 'Cierres que superan el umbral de puño, separados por una apertura.',
-  },
-  {
-    id: 'balloon_fatigue', chapter: 'fox_balloon', label: 'Cambio de cierre (inicio → final)', unit: '%', decimals: 0,
-    read: r => num(r.fatigue_index),
-    meaning: 'Indicio de fatiga: un valor negativo indica puños menos completos al final.',
-    how: 'Diferencia entre el cierre máximo del último cuarto de la partida y el del primero.',
   },
 
   // ── El huerto (giro) ──
@@ -244,12 +245,33 @@ export const MEASURES: Measure[] = [
   },
 ];
 
-/** Medida común: calidad del seguimiento (fiabilidad de las cifras de esa partida). */
+/** Medida común: porcentaje de la partida con la mano detectada (no garantiza que las medidas sean exactas). */
 export const QUALITY_MEASURE = {
-  label: 'Calidad del seguimiento',
+  label: 'Mano detectada',
   read: (r: Row) => num(r.quality_frames_pct),
-  meaning: 'Porcentaje del tiempo de juego con la mano bien detectada. Por debajo del 80 %, interpretar las cifras con cautela.',
+  meaning: 'Porcentaje del tiempo de juego en que se vio la mano. Que se vea no garantiza que las medidas sean exactas: para eso está la fiabilidad.',
 } as const;
+
+// Fiabilidad de la partida (vision/reliability.js en el juego). Solo existe en partidas nuevas.
+export type ReliabilityLevel = 'high' | 'medium' | 'low';
+export interface Reliability { level: ReliabilityLevel; reasons: string[]; detectedPct: number | null; rejectedPct: number | null; framingOkPct: number | null; framingIssues?: Record<string, number> }
+export const RELIABILITY_LABEL: Record<ReliabilityLevel, string> = { high: 'Fiabilidad alta', medium: 'Fiabilidad media', low: 'Fiabilidad baja' };
+const REASON_TEXT: Record<string, string> = {
+  detected: 'la mano no se vio todo el tiempo',
+  rejected: 'se descartaron detecciones inestables (formas imposibles o saltos)',
+  framing: 'la mano estuvo a menudo mal encuadrada (cerca, lejos o en un borde)',
+};
+export const reliabilityReasons = (r: Reliability) => r.reasons.map(k => REASON_TEXT[k] ?? k);
+export function reliabilityOf(r: Row | null): Reliability | null {
+  const rel = r ? obj(outcome(r).reliability) : {};
+  return typeof rel.level === 'string' ? (rel as unknown as Reliability) : null;
+}
+/** Peor fiabilidad de los capítulos de una sesión (o null si es una partida antigua). */
+export function sessionReliability(s: Session): ReliabilityLevel | null {
+  const levels = CHAPTER_ORDER.map(c => reliabilityOf(chapterRow(s, c))?.level).filter(Boolean) as ReliabilityLevel[];
+  if (!levels.length) return null;
+  return levels.includes('low') ? 'low' : levels.includes('medium') ? 'medium' : 'high';
+}
 
 export const measuresOf = (c: ChapterKey) => MEASURES.filter(m => m.chapter === c);
 
