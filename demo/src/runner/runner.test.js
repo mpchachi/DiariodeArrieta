@@ -83,6 +83,17 @@ test('pinza parcial (sin llegar al umbral de cierre) no salta', () => {
   assert.equal(events.length, 0);
 });
 
+test('el tiempo de cierre no reutiliza una apertura de otro ciclo', () => {
+  const controller = new PinchController();
+  const events = [];
+  for (const [t, ratio] of [[0, .8], [400, .8], [500, .2], [560, .2], [600, .3], [700, .3], [800, .3], [900, .2], [960, .2]]) {
+    const event = controller.update({ valid: true, eligible: true, ratio }, t).event;
+    if (event?.type === 'grab') events.push(event);
+  }
+  assert.deepEqual(events.map(e => e.closingMs), [160, 160]);
+  assert.equal(events[1].maximum, .3);
+});
+
 test('recorrido fijo y reproducible con un solo tipo de obstáculo', () => {
   const a = buildCourse(), b = buildCourse();
   assert.deepEqual(a, b);

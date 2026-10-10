@@ -62,7 +62,7 @@ export class FlappySession {
 
   finish(endedAt, completed, engineState) {
     const cols = [...this.columns.values()];
-    const total = engineState.columns.length;
+    const total = engineState.columns.length || this.C.columnCount;
     const coverage = this.attemptedFrames ? this.trackedFrames / this.attemptedFrames : 0;
     return {
       schemaVersion: 1, protocol: this.C.protocol, algorithmVersion: this.C.algorithm, game: 'flappy',

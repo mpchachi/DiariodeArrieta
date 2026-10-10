@@ -12,6 +12,7 @@ import { knuckleTilt, TiltFilter } from './tilt.js';
 import { GardenEngine } from './engine.js';
 import { GardenScene } from './scene.js';
 import { ReliabilityMeter } from '../vision/reliability.js';
+import { MeasurementRecorder, detectorHand, sampleIssue } from '../pack/measurement.js';
 import { summarize } from './session.js';
 import { flowerName } from '../pixel/garden.js';
 import { RunnerCamera } from '../runner/camera.js';
@@ -81,7 +82,9 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
   const guide = createGestureGuide(root);
   const framing = new FramingTracker();
   const reliability = new ReliabilityMeter(); // fiabilidad de las medidas de la partida
-  const tracker = new HandTracker();
+  const tracker = new HandTracker({ preferred: detectorHand(hand), required: true });
+  const observation = new MeasurementRecorder({ game: 'fox_garden', hand, config: C, source: 'knuckle-image-tilt-v2',
+    targets: C.flowers.map((_, i) => ({ id: `flower-${i}`, stage: 'active' })) });
   const smoother = new HandSmoother({ emaAlpha: 0.6, maxLostFrames: 8 });
   const filter = new TiltFilter(C.tiltAlpha, C.minQuality);
   let phase = 'loading', disposed = false, raf = null, last = performance.now(), startedAt = null, startWall = null;
@@ -94,7 +97,7 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
   // Cualquier mano visible (la de más confianza): sirve para derecha e izquierda.
   const camera = cameraFactory({ hand: 'Right', onFrame: receive,
     onStatus: m => { if (disposed) return; if (phase === 'loading') setText(role('status'), m); else if (phase === 'paused') setText(role('pause-hint'), m); },
-    onError: m => { if (disposed) return; if (phase === 'playing' || phase === 'paused') finish(false); phase = 'error'; role('loading').hidden = false; setText(role('status'), m); } });
+    onError: m => { if (disposed) return; if (!result) finish(false); phase = 'error'; role('loading').hidden = false; setText(role('status'), m); } });
 
   function receive(frame) {
     if (disposed) return;
@@ -111,6 +114,15 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
     const pts = smoother.smooth(picked?.landmarks ?? null);
     raw = pts ? knuckleTilt(pts, frame.width, frame.height) : null;
     const angle = filter.update(raw, frame.t);
+    const observed = knuckleTilt(picked?.landmarks, frame.width, frame.height);
+    const issue = sampleIssue(frame, sel, { sourceAvailable: !!observed, fresh: !!observed && observed.quality >= C.minQuality });
+    if (!result && (tutorialStep || engine.phase === 'water' || phase === 'paused')) {
+      observation.add(frame, { target: tutorialStep ? 'tutorial' : `flower-${engine.index}`, stage: phase === 'paused' ? 'paused' : tutorialStep ? 'tutorial' : 'active',
+        value: observed && engine.neutral !== null ? engine.pourSign * wrap(observed.angle - engine.neutral) : null,
+        issue: issue ?? (engine.neutral === null ? 'uncalibrated' : null) });
+    }
+    observation.neutral = engine.neutral;
+    observation.adapt(frame.t, engine.pourStart, `flower-${engine.index}`);
     const now = performance.now();
     if (!picked || angle === null) { trackedSince = null; return; }
     lastTrackedWall = now; trackedSince ??= now; tracked++;
@@ -125,8 +137,13 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
       endTutorial(frame.t);
     }
     for (const ev of engine.update({ t: frame.t, angle, velocity: filter.velocity, wrist: { x: picked.landmarks[0].x, y: picked.landmarks[0].y } })) {
-      if (ev.type === 'bloom') audio.berry();
-      if (ev.type === 'ready') { audio.go(); if (tutorialStep === 'grip') showTutorial('tilt'); }
+      if (ev.type === 'bloom') { audio.berry(); observation.complete(`flower-${engine.index}`); }
+      if (ev.type === 'ready') {
+        const angles = engine.window.map(p => p.angle);
+        observation.calibration = { stable: angles.length >= 2 && Math.max(...angles) - Math.min(...angles) <= C.neutralToleranceDeg,
+          referenceDeg: engine.neutral, frames: angles.length };
+        audio.go(); if (tutorialStep === 'grip') showTutorial('tilt');
+      }
       if (ev.type === 'done') finish(true);
     }
   }
@@ -163,6 +180,7 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
       durationMs: startedAt !== null ? Math.round(lastCamT - startedAt) : null,
       quality: { trackedCoverage: attempted ? Math.round(tracked / attempted * 1000) / 1000 : 0, pauses, pausedMs: Math.round(pausedMs), reliability: reliability.summary() } });
     result.tutorial = tutorialAt !== null ? { steps: ['grip', 'tilt'], shownMs: Math.round(tutorialMs) } : null;
+    result.measurement = observation.finish(completed, performance.now());
     storeSession(result, SESSIONS_KEY);
     camera.stop();
     if (completed) audio.finish();
@@ -226,13 +244,13 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
     if (onDone) onDone(result); else startGardenGame(container, { subjectId, onExit, onDone, cameraFactory });
   });
   $('[data-action="exit"]').addEventListener('click', () => {
-    if (phase === 'playing' || phase === 'paused') finish(false);
+    if (!result) finish(false);
     cleanup();
     if (onExit) onExit(); else startGardenGame(container, { subjectId, onExit, onDone, cameraFactory });
   });
   $('[data-action="mute"]').addEventListener('click', e => { e.currentTarget.textContent = `Sonido: ${audio.toggle() ? 'no' : 'sí'}`; });
   $('[data-action="skip"]')?.addEventListener('click', () => {
-    if (phase === 'playing' || phase === 'paused') finish(false);
+    if (!result) finish(false);
     const r = result; cleanup(); onComplete({ result: r, skipped: true });
   });
 
@@ -246,6 +264,7 @@ export function startGardenGame(container, { subjectId = null, onExit = null, on
   markHand();
   root.querySelectorAll('[data-hand]').forEach(b => b.addEventListener('click', () => {
     hand = b.dataset.hand; handChosen = true; markHand();
+    tracker.preferred = detectorHand(hand); tracker.reset(); observation.hand = hand;
     try { localStorage.setItem(HAND_KEY, hand); } catch { /* sin almacenamiento */ }
     scene.mirror = hand === 'Right';
     engine = new GardenEngine(C, { pourSign: hand === 'Right' ? -1 : 1 });

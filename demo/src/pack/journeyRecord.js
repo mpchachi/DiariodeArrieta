@@ -9,6 +9,7 @@
 // Las métricas son exploratorias (no diagnósticas), como indica el catálogo del Excel.
 
 import { computeSPARCFromProfile } from '../clinical/metrics.js';
+import { MEASUREMENT_VERSION, discreteSmoothness, quantile } from './measurement.js';
 
 export const GAME_KEYS = Object.freeze({ runner: 'fox_runner', flappy: 'fox_balloon', garden: 'fox_garden' });
 // Longitud media de la palma adulta (muñeca → nudillo medio) para convertir «palmas» a mm (aprox.).
@@ -226,7 +227,44 @@ export function gardenRow(r) {
 // Resultados del viaje → filas listas para insertar (sin session_id), en orden de juego.
 export function buildJourneyRows(results) {
   const rows = [];
-  const add = (fn, res) => { if (res) rows.push({ ...fn(res), play_order: rows.length + 1 }); };
+  const add = (fn, res) => {
+    if (!res) return;
+    const row = { ...fn(res), play_order: rows.length + 1 };
+    if (res.measurement?.version === MEASUREMENT_VERSION) {
+      const m = res.measurement;
+      row.outcome.measurement = m;
+      row.outcome.tutorial = res.tutorial ?? null;
+      row.outcome.observationValues = {
+        upper: m.summary.upper, lower: m.summary.lower, excursion: m.summary.excursion,
+        opportunities: m.summary.opportunities,
+      };
+      const smoothness = m.observations.filter(o => o.stage === 'active' && o.usableCount >= 12).map(o => {
+        const points = m.trace.filter(p => p[2] === 'active' && p[3] === o.id).map(p => ({ t: p[0], v: p[1] }));
+        if (points.some(p => p.v === null)) return null;
+        let peak = 0;
+        points.forEach((p, i) => { if (p.v > points[peak].v) peak = i; });
+        return discreteSmoothness(points.slice(0, peak + 1));
+      }).filter(Number.isFinite);
+      row.session_sparc = m.game === 'fox_garden' ? round(quantile(smoothness, .5), 3) : null;
+      row.sparc_mean = m.game === 'fox_garden' ? round(mean(smoothness), 3) : null;
+      row.tremor_band = null;
+      row.avg_fps = m.capture.fps;
+      if (!m.capture.frames) row.quality_frames_pct = null;
+      row.outcome.captureDefinition = 'legacy-coverage-with-separate-usable-samples';
+      row.outcome.legacyControlMetrics = { handOpenHigh: row.hand_open_pct_p90 ?? null, handOpenLow: row.hand_open_pct_p10 ?? null,
+        maxTilt: row.max_pronation_deg ?? null, oppositeTilt: row.max_supination_deg ?? null };
+      if (m.game === 'fox_balloon') {
+        row.hand_open_pct_p90 = null; row.hand_open_pct_p10 = null;
+        row.rom_deg_p90 = m.summary.excursion;
+        row.outcome.fingerFlexion = { maxDeg: m.summary.upper, minDeg: m.summary.lower, arcDeg: m.summary.excursion,
+          frames: m.capture.usable, method: m.source };
+      }
+      if (m.game === 'fox_garden') {
+        row.max_pronation_deg = null; row.max_supination_deg = null; row.rom_deg_p90 = null;
+      }
+    }
+    rows.push(row);
+  };
   add(runnerRow, results.runner);
   add(flappyRow, results.flappy);
   add(gardenRow, results.garden);

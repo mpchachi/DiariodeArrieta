@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { computePriorityScore, linearSlope, computeAdherenceDeficit7d } from './priority';
 import type { DerivedClinical, Session } from '../data/types';
+import { computeDerivedClinical } from './scores';
 
 describe('linearSlope', () => {
   it('returns positive slope for increasing values', () => {
@@ -54,6 +55,7 @@ describe('computeAdherenceDeficit7d', () => {
 describe('computePriorityScore', () => {
   it('returns 0 for patient with no flags, flat trend, full adherence', () => {
     const derived: DerivedClinical = {
+      ...computeDerivedClinical([]),
       tremorFlag: false, spasticityFlag: false, fatigueFlag: false, impulseControlFlag: false,
       proximalGripScore: 70, distalFlexExtScore: 70, pronoSupScore: 70, globalMotorScore: 70,
       scaleMetrics: [],
@@ -64,6 +66,7 @@ describe('computePriorityScore', () => {
 
   it('increases with flags', () => {
     const derived: DerivedClinical = {
+      ...computeDerivedClinical([]),
       tremorFlag: true, spasticityFlag: true, fatigueFlag: false, impulseControlFlag: false,
       proximalGripScore: 50, distalFlexExtScore: 50, pronoSupScore: 50, globalMotorScore: 50,
       scaleMetrics: [],
@@ -74,6 +77,7 @@ describe('computePriorityScore', () => {
 
   it('increases with regression', () => {
     const derived: DerivedClinical = {
+      ...computeDerivedClinical([]),
       tremorFlag: false, spasticityFlag: false, fatigueFlag: false, impulseControlFlag: false,
       proximalGripScore: 50, distalFlexExtScore: 50, pronoSupScore: 50, globalMotorScore: 50,
       scaleMetrics: [],
@@ -84,6 +88,7 @@ describe('computePriorityScore', () => {
 
   it('increases with adherence deficit', () => {
     const derived: DerivedClinical = {
+      ...computeDerivedClinical([]),
       tremorFlag: false, spasticityFlag: false, fatigueFlag: false, impulseControlFlag: false,
       proximalGripScore: 50, distalFlexExtScore: 50, pronoSupScore: 50, globalMotorScore: 50,
       scaleMetrics: [],

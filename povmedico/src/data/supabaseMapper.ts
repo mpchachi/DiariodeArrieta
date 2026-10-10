@@ -83,9 +83,11 @@ export function mapSupabaseSession(sessionRow: any, gameResultRows: any[]): Sess
     patientId: sessionRow.subject_id,
     date: sessionRow.started_at ? sessionRow.started_at.split('T')[0] : new Date().toISOString().split('T')[0],
     startedAt: sessionRow.started_at ?? undefined,
-    completed: !!sessionRow.completed,
+    completed: sessionRow.device?.protocol === 'fixedgap-fox-journey-v2'
+      ? ['fox_runner', 'fox_balloon', 'fox_garden'].every(key => gameResultRows.some(gr => gr.game_key === key && gr.outcome?.completed === true))
+      : !!sessionRow.completed,
     qualityPct: sessionRow.quality_frames_pct ?? null,
-    handUsed: sessionRow.device?.handUsed || 'right',
+    handUsed: ['left', 'right'].includes(sessionRow.device?.handUsed) ? sessionRow.device.handUsed : null,
     games,
     derived: computeDerivedClinical(games), // Calculate metrics based on the mapped games
   };

@@ -18,12 +18,13 @@ import { setPixelScale } from '../pixel/sprite.js';
 import { createGestureGuide } from '../tutorial/gestureGuide.js';
 import { createPraise, createFloaters } from '../feedback/calm.js';
 import { ReliabilityMeter } from '../vision/reliability.js';
+import { MeasurementRecorder, detectorHand, sampleIssue } from '../pack/measurement.js';
 
 const PRE_PLAY = ['title', 'loading', 'setup', 'armed', 'error'];
 
 // `onComplete` (modo pack «El viaje del zorro»): sin pantallas de título ni final; empieza
 // solo, no cambia la estación (lo hace el pack al final) y entrega el resultado al acabar.
-export function startRunnerGame(container, { subjectId = null, onExit = null, onNext = null, onComplete = null, cameraFactory = options => new RunnerCamera(options) } = {}) {
+export function startRunnerGame(container, { subjectId = null, hand: patientHand = 'Right', onExit = null, onNext = null, onComplete = null, cameraFactory = options => new RunnerCamera(options) } = {}) {
   container.innerHTML = `
     <section class="runner-app">
       <canvas class="runner-canvas" width="${C.width}" height="${C.height}" aria-label="Zorro corriendo por el bosque"></canvas>
@@ -115,8 +116,9 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
   const course = buildCourse(C);
   const idealOffset = takeoffWindow({ x: 0, w: OBSTACLE.w, h: OBSTACLE.h }, C)?.ideal ?? null;
 
-  const hand = C.detectedHandLabel;
-  const selector = new HandSelector(hand, C.pinch), controller = new PinchController(C.pinch);
+  const hand = detectorHand(patientHand);
+  const selector = new HandSelector(hand, { ...C.pinch, requireChosenHand: true }), controller = new PinchController(C.pinch);
+  let observation;
   const framing = new FramingTracker(); // por qué se pierde la mano (cerca, borde, luz)
   const reliability = new ReliabilityMeter(); // fiabilidad de las medidas de la partida
   let season = getSeason(subjectId), nextSeason = season, seasonBlend = 0;
@@ -143,7 +145,7 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     },
     onError: message => {
       if (disposed) return;
-      if (['playing', 'tutorial', 'paused', 'finishing'].includes(phase)) finish(false);
+      if (!['title', 'done', 'error'].includes(phase)) finish(false);
       clearInterval(countdownTimer); controller.reset(); selector.reset();
       phase = 'error'; show('setup'); guide.hide();
       setText(role('setup-title'), 'No puedo usar la cámara');
@@ -151,6 +153,8 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
     } });
 
   function resetRun() {
+    observation = new MeasurementRecorder({ game: 'fox_runner', hand: patientHand, config: C, source: 'pinch-projected-palm-ratio-v2',
+      targets: course.obstacles.map(o => ({ id: `obstacle-${o.id}`, stage: o.id < C.tutorialJumps ? 'tutorial' : 'active' })) });
     fox = createFox(); gameMs = 0; scroll = 0; sparkles = []; foxHidden = false; floaters.clear(); praise.hide(); reliability.reset();
     obstacles = course.obstacles.map(o => ({ ...o, hit: false, passed: false }));
     berries = course.berries.map(b => ({ ...b, taken: false }));
@@ -210,7 +214,7 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
       clearInterval(countdownTimer); countdownTimer = null;
       setText(el, '¡Ya!'); audio.go();
       setTimeout(() => { el.hidden = true; }, 600);
-      session = new RunnerSession({ hand: C.patientHand, subjectId, season, startedAt: lastFrame?.t ?? 0, course, C });
+      session = new RunnerSession({ hand: patientHand, subjectId, season, startedAt: lastFrame?.t ?? 0, course, C });
       phase = 'playing';
     }, 800);
   }
@@ -228,6 +232,13 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
       : { valid: false, eligible: false, ratio: null, reason: selected.reason };
     if (C.pinch.strictQuality && span >= 1000 && fps < C.pinch.minCaptureFps) measurement = { valid: false, eligible: false, ratio: null, reason: 'slow' };
     pinchState = controller.update(measurement, frame.t);
+    if (!result && !['title', 'loading', 'error', 'done', 'finishing'].includes(phase)) {
+      const next = obstacles.find(o => !o.passed);
+      const preparing = ['setup', 'armed', 'countdown'].includes(phase);
+      const stage = preparing ? 'preparation' : phase === 'paused' ? 'paused' : next?.id < C.tutorialJumps ? 'tutorial' : 'active';
+      observation.add(frame, { target: preparing ? 'preparation' : `obstacle-${next?.id ?? 'end'}`, stage,
+        value: measurement.ratio, issue: sampleIssue(frame, selected, { sourceAvailable: Number.isFinite(measurement.ratio) }) ?? (measurement.quality === 'side' ? 'projection-side' : null) });
+    }
     if (pinchState.ready) lastReadyWall = lastFrameWall;
     if (session && ['playing', 'tutorial', 'paused', 'finishing'].includes(phase)) {
       session.addSample(frame, measurement, pinchState);
@@ -322,6 +333,7 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
       if (foxWorld + FOX_BOX.left > o.x + o.w) {
         o.passed = true;
         session?.resolveObstacle(o.id, !o.hit);
+        if (!o.hit) observation.complete(`obstacle-${o.id}`);
         // Los troncos de la ronda guiada ya los celebra la guía («¡Eso es!»).
         if (!o.hit && !(tutorialShown && o.id < tutorialJumps)) {
           praise.cheer();
@@ -358,8 +370,10 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
   }
 
   function finish(completed) {
-    if (!session || result) return;
+    if (result) return;
+    session ??= new RunnerSession({ hand: patientHand, subjectId, season, startedAt: observation.start ?? lastFrame?.t ?? 0, course, C });
     result = session.finish(lastFrame?.t ?? session.start, gameMs, completed);
+    result.measurement = observation.finish(completed, performance.now());
     result.seasonName = SEASONS[season].name;
     result.quality.reliability = reliability.summary();
     result.tutorial = tutorialShown ? { gesture: 'pinch', jumps: tutorialJumps, obstacleIds: Array.from({ length: tutorialJumps }, (_, i) => i), shownMs: Math.round(tutorialMs) } : null;
@@ -494,13 +508,13 @@ export function startRunnerGame(container, { subjectId = null, onExit = null, on
   // Secuencia: al terminar el zorro (o al saltarlo) se pasa al siguiente juego.
   $('[data-action="next"]')?.addEventListener('click', () => { const r = result; cleanup(); onNext({ result: r }); });
   $('[data-action="skip"]')?.addEventListener('click', () => {
-    if (['playing', 'tutorial', 'paused', 'finishing'].includes(phase)) finish(false);
+    if (!['title', 'done', 'error'].includes(phase)) finish(false);
     clearInterval(countdownTimer);
     const r = result; cleanup();
     if (onComplete) onComplete({ result: r, skipped: true }); else onNext({ result: r, skipped: true });
   });
   $('[data-action="exit"]').addEventListener('click', () => {
-    if (['playing', 'tutorial', 'paused', 'finishing'].includes(phase)) finish(false);
+    if (!['title', 'done', 'error'].includes(phase)) finish(false);
     if (onExit) { cleanup(); onExit(); return; }
     exitToTitle();
   });

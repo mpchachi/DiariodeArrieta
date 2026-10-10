@@ -6,7 +6,8 @@
 
 import '../runner/runner.css';
 import { FLAPPY_CONFIG as C } from './config.js';
-import { mapLandmarks, HandSmoother, measureFist, measureFistCurl } from './fist.js';
+import { mapLandmarks, HandSmoother, measureFist, measureFistCurl, measureFingerAngles } from './fist.js';
+import { MeasurementRecorder, detectorHand, sampleIssue } from '../pack/measurement.js';
 import { FlappyEngine } from './engine.js';
 import { PixelFlappyScene } from './pixelScene.js';
 import { FlappySession } from './session.js';
@@ -24,7 +25,7 @@ import { ReliabilityMeter } from '../vision/reliability.js';
 const SESSIONS_KEY = 'fixedgap_flappy_sessions';
 
 // `onComplete`: modo pack (sin pantallas de título ni final; entrega el resultado al acabar).
-export function startFlappyGame(container, { subjectId = null, onExit = null, onDone = null, onNext = null, onComplete = null,
+export function startFlappyGame(container, { subjectId = null, hand: patientHand = 'Right', onExit = null, onDone = null, onNext = null, onComplete = null,
   cameraFactory = options => new RunnerCamera(options) } = {}) {
   container.innerHTML = `
     <section class="runner-app flappy-app">
@@ -77,8 +78,10 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
   const framing = new FramingTracker();
   const reliability = new ReliabilityMeter(); // fiabilidad de las medidas de la partida
   // Siempre la mano derecha del paciente (ver RUNNER_CONFIG.detectedHandLabel).
-  const hand = RUNNER_CONFIG.detectedHandLabel;
-  const selector = new HandSelector(hand, RUNNER_CONFIG.pinch);
+  const hand = detectorHand(patientHand);
+  const selector = new HandSelector(hand, { ...RUNNER_CONFIG.pinch, requireChosenHand: true });
+  const observation = new MeasurementRecorder({ game: 'fox_balloon', hand: patientHand, config: C, source: 'finger-angles-projected-mcp-v2',
+    targets: Array.from({ length: C.columnCount }, (_, i) => ({ id: `column-${i + 1}`, stage: 'active' })) });
   const smoother = new HandSmoother(C.fist), worldSmoother = new HandSmoother(C.fist, 1);
   let phase = 'loading', disposed = false, raf = null, last = performance.now(), playMs = 0;
   let strength = 0, fist = null, lastTrackedWall = null, trackedSince = null, lastFrame = null;
@@ -86,7 +89,7 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
 
   const camera = cameraFactory({ hand, onFrame: receive,
     onStatus: m => { if (disposed) return; if (phase === 'loading') setText(role('status'), m); else if (phase === 'paused') setText(role('pause-hint'), m); },
-    onError: m => { if (disposed) return; if (phase === 'playing' || phase === 'paused') finish(false); phase = 'error'; role('loading').hidden = false; setText(role('status'), m); } });
+    onError: m => { if (disposed) return; if (!result) finish(false); phase = 'error'; role('loading').hidden = false; setText(role('status'), m); } });
 
   function receive(frame) {
     if (disposed) return;
@@ -106,9 +109,15 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
     const now = performance.now();
     if (picked) { lastTrackedWall = now; trackedSince ??= now; } else trackedSince = null;
     if (session && (phase === 'playing' || phase === 'paused')) reliability.add({ reason: sel.reason, handsInFrame: frame.hands?.length ?? 0, hint, hand: sel.hand, width: frame.width, height: frame.height });
+    const angles = measureFingerAngles(picked?.world);
+    const issue = sampleIssue(frame, sel, { sourceAvailable: !!angles });
+    if (['tutorial', 'playing', 'paused'].includes(phase) && !result) {
+      observation.add(frame, { target: phase === 'tutorial' ? 'tutorial' : `column-${engine.state.columns.find(c => !c.passed)?.id ?? 'end'}`,
+        stage: phase === 'playing' ? 'active' : phase, value: angles?.meanDeg, fingers: angles?.fingers, issue });
+    }
     session?.log(frame.t, engine.state.status === 'playing' && phase === 'playing' ? 'playing' : phase,
       { fistStrength: strength, averageRatio: fist?.averageRatio, legacyStrength: fist?.legacyStrength ?? fist?.strength, planeY: engine.state.planeY, tracked: !!picked,
-        flexDeg: curl?.valid ? curl.fingers.reduce((a, f) => a + f.mcp + f.pip + f.dip, 0) / curl.fingers.length : null });
+        flexDeg: !issue ? angles?.meanDeg : null });
   }
 
   function bubble(text, ms) { setText(role('bubble'), text); role('bubble').hidden = false; bubbleUntil = performance.now() + ms; }
@@ -123,14 +132,16 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
     tutorialMs = performance.now() - tutorialAt;
     void guide.success();
     engine.start();
-    session = new FlappySession({ hand: RUNNER_CONFIG.patientHand, subjectId, startedAt: lastFrame?.t ?? 0, C });
+    session = new FlappySession({ hand: patientHand, subjectId, startedAt: lastFrame?.t ?? 0, C });
     phase = 'playing';
     audio.go();
   }
 
   function finish(completed) {
-    if (!session || result) return;
+    if (result) return;
+    session ??= new FlappySession({ hand: patientHand, subjectId, startedAt: observation.start ?? lastFrame?.t ?? 0, C });
     result = session.finish(lastFrame?.t ?? session.start, completed, engine.state);
+    result.measurement = observation.finish(completed, performance.now());
     result.season = season;
     result.tutorial = tutorialAt !== null ? { gesture: 'fist', shownMs: Math.round(tutorialMs) } : null;
     result.quality.reliability = reliability.summary();
@@ -172,6 +183,7 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
         for (const id of ev.passed) {
           const col = engine.state.columns.find(c => c.id === id);
           session.column(id, { passed: true, hit: col.hit });
+          observation.complete(`column-${id}`);
           if (!col.hit) { audio.berry(); praise.cheer(); scene.cheer(); }
         }
         if (ev.hit !== null) { session.column(ev.hit, { hit: true }); audio.hit(); praise.encourage(); }
@@ -202,16 +214,16 @@ export function startFlappyGame(container, { subjectId = null, onExit = null, on
   document.addEventListener('keydown', keydown);
   $('[data-action="done"]').addEventListener('click', () => {
     if (onDone) { cleanup(); onDone(result); return; }
-    cleanup(); startFlappyGame(container, { subjectId, onExit, onDone, onNext, cameraFactory });
+    cleanup(); startFlappyGame(container, { subjectId, hand: patientHand, onExit, onDone, onNext, cameraFactory });
   });
   $('[data-action="exit"]').addEventListener('click', () => {
-    if (phase === 'playing' || phase === 'paused') finish(false);
+    if (!result) finish(false);
     cleanup();
-    if (onExit) onExit(); else startFlappyGame(container, { subjectId, onExit, onDone, onNext, cameraFactory });
+    if (onExit) onExit(); else startFlappyGame(container, { subjectId, hand: patientHand, onExit, onDone, onNext, cameraFactory });
   });
   $('[data-action="next"]')?.addEventListener('click', () => { const r = result; cleanup(); onNext({ result: r }); });
   $('[data-action="skip"]')?.addEventListener('click', () => {
-    if (phase === 'playing' || phase === 'paused') finish(false);
+    if (!result) finish(false);
     const r = result; cleanup();
     if (onComplete) onComplete({ result: r, skipped: true }); else onNext({ result: r, skipped: true });
   });

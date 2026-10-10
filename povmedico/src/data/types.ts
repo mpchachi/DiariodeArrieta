@@ -129,7 +129,7 @@ export interface Session {
   completed?: boolean;
   /** % medio de fotogramas con la mano bien detectada. */
   qualityPct?: number | null;
-  handUsed: Hand;
+  handUsed: Hand | null;
   games: GameResult[];
   derived: DerivedClinical;
 }

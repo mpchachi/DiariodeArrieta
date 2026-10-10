@@ -157,7 +157,7 @@ export function startFoxJourney(container, { subjectId = null, onExit = null, on
       if (disposed) return;
       if (i + 1 < CHAPTERS.length) interlude(i + 1); else finale();
     };
-    const common = { subjectId, onExit: onExit ? exit : restart, onComplete: next, cameraFactory: camera };
+    const common = { subjectId, hand, onExit: onExit ? exit : restart, onComplete: next, cameraFactory: camera };
     stopCurrent = i === 0 ? startRunnerGame(container, common)
       : i === 1 ? startFlappyGame(container, common)
       : startGardenGame(container, { ...common, hand });

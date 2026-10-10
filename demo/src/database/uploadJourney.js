@@ -32,7 +32,11 @@ export async function uploadJourney({ subjectId, startedAt = null, hand = null, 
     started_at: startedAt ? new Date(startedAt).toISOString() : new Date().toISOString(),
     device: {
       userAgent: navigator.userAgent, screenWidth: screen.width, screenHeight: screen.height, platform: navigator.platform,
-      handUsed: hand === 'Left' ? 'left' : 'right', app: 'fox-journey', protocol: 'fixedgap-fox-journey-v1',
+      handUsed: hand === 'Left' ? 'left' : hand === 'Right' ? 'right' : null, app: 'fox-journey', protocol: 'fixedgap-fox-journey-v2',
+      measurementVersions: rows.map(r => ({ game: r.game_key, version: r.outcome?.measurement?.version ?? null })),
+      chapterCompletion: rows.map(r => ({ game: r.game_key, completed: r.outcome?.completed === true })),
+      chapterCoverage: rows.map(r => ({ game: r.game_key, coverage: r.quality_frames_pct })),
+      captureDevice: 'browser-camera-unidentified',
     },
     quality_frames_pct: quality.length ? Math.round(quality.reduce((a, b) => a + b, 0) / quality.length * 10) / 10 : null,
   }).select('id').single());
@@ -41,5 +45,8 @@ export async function uploadJourney({ subjectId, startedAt = null, hand = null, 
   const sessionId = session.data.id;
   const inserted = await retry(() => supabase.from('game_results').insert(rows.map(r => ({ ...r, session_id: sessionId }))));
   if (inserted.error) return { ok: false, sessionId, error: inserted.error.message };
+  const completed = rows.length === 3 && rows.every(r => r.outcome?.completed === true);
+  const finalized = await retry(() => supabase.from('sessions').update({ completed, ended_at: new Date().toISOString() }).eq('id', sessionId).select('id').single());
+  if (finalized.error) return { ok: false, sessionId, error: finalized.error.message };
   return { ok: true, sessionId };
 }

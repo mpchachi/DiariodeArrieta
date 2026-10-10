@@ -5,7 +5,7 @@ import { createServer } from 'vite';
 import assert from 'node:assert/strict';
 
 const shots = process.env.RUNNER_SHOTS;
-const server = await createServer({ server: { host: '127.0.0.1', port: 0, strictPort: false, open: false } });
+const server = await createServer({ server: { host: '127.0.0.1', port: 0, strictPort: false, open: false, watch: null, hmr: false } });
 await server.listen();
 const base = `http://127.0.0.1:${server.httpServer.address().port}`;
 let browser;
@@ -20,7 +20,7 @@ try {
     window.testFrame = { ratio: .8, missing: false };
     window.bot = { auto: false, holdUntil: 0, lastTarget: null };
     const XY = [[0,0],[-.3,-.15],[-.6,-.35],[-.7,-.7],[-.4,-1.1],[-.4,-.9],[-.4,-1.45],[-.3,-1.8],[null,-1.1],[0,-1],[0,-1.5],[0,-1.9],[0,-2.2],[.35,-.9],[.4,-1.4],[.4,-1.7],[.4,-1.9],[.65,-.7],[.7,-1.1],[.7,-1.4],[.7,-1.6]];
-    startRunnerGame(document.querySelector('#app'), { subjectId: 'synthetic-runner-test', onNext: next => { window.nextGame = next; }, cameraFactory: ({ onFrame }) => {
+    startRunnerGame(document.querySelector('#app'), { subjectId: 'synthetic-runner-test', hand: ${JSON.stringify(process.env.TEST_HAND || 'Right')}, onNext: next => { window.nextGame = next; }, cameraFactory: ({ onFrame, hand }) => {
       let interval;
       return { delegate: 'mock', hand: 'Right', async start() {
         interval = setInterval(() => {
@@ -39,7 +39,7 @@ try {
           }
           const landmarks = XY.map(([a, b]) => ({ x: .5 + (a ?? -.4 + o.ratio) * .12, y: .7 + b * .16, z: 0 }));
           onFrame({ t: performance.now(), width: 640, height: 480, luminance: 120, latencyMs: 5,
-            hands: o.missing ? [] : [{ handedness: 'Right', score: .99, landmarks }] });
+            hands: o.missing ? [] : [{ handedness: hand, score: .99, landmarks }] });
         }, 33);
         return true;
       }, stop() { clearInterval(interval); } };
@@ -118,7 +118,11 @@ try {
   if (shots) await page.screenshot({ path: `${shots}/runner-end.png` });
   await page.locator('[data-action=next]').click();
   assert.equal(await page.evaluate(() => !!window.nextGame && !window.nextGame.skipped), true, 'pasa al siguiente juego');
-  assert.equal(r.hand, 'Right', 'siempre la mano derecha del paciente');
+  assert.equal(r.hand, process.env.TEST_HAND || 'Right');
+  assert.equal(r.measurement.selectedHand, r.hand);
+  assert.equal(r.measurement.observations.filter(o => o.stage === 'tutorial').length, 2);
+  assert.equal(r.measurement.observations.filter(o => o.stage === 'active' && o.status === 'completed').length, 3);
+  assert.ok(r.measurement.trace.length > 0);
 
   // Botón para saltar al siguiente juego en mitad del zorro.
   await page.goto(`${base}/runner.html`);

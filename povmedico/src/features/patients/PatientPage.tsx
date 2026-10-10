@@ -3,11 +3,12 @@ import { useParams, Link } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import type { Patient, Session } from '../../data/types';
 import { getPatient, getSessions } from '../../data/api';
+import { canCompare, comparisonReason, measurementOf, DIMENSIONS, OBSERVATION_STATUS } from '../../data/comparability';
 import { CHAPTERS, CHAPTER_ORDER, MEASURES, QUALITY_MEASURE, RELIABILITY_LABEL, reliabilityOf, reliabilityReasons, sessionReliability, measuresOf, formatValue, formatDelta, chapterRow, repetitions, PALM_MM, type ChapterKey, type Measure, type Row } from '../../data/measures';
 import { PageHeader, Panel, Badge, Empty, btn, IconArrowLeft, IconPrinter, IconChevronDown, IconChevronRight, IconAlert, IconPlay } from '../../components/ui';
 import { SEX, MOBILITY, TypeBadge, fmtDate, fmtDateTime, fmtAgo, byDate, sessionTime, daysSince, QUALITY_MIN } from './shared';
 
-const handLabel = (h?: string) => (h === 'left' ? 'Mano izquierda' : 'Mano derecha');
+const handLabel = (h?: string | null) => (h === 'left' ? 'Mano izquierda' : h === 'right' ? 'Mano derecha' : 'Mano no registrada');
 const totalMinutes = (s: Session) => s.games.reduce((a, g) => a + (g.durationMs || 0), 0) / 60000;
 
 export function PatientPage() {
@@ -92,28 +93,33 @@ function LastSession({ last, prev }: { last: Session; prev?: Session }) {
       <div className="grid gap-4 lg:grid-cols-3">
         {CHAPTER_ORDER.map(c => <ChapterSummary key={c} chapter={c} row={chapterRow(last, c)} prevRow={prev ? chapterRow(prev, c) : null} />)}
       </div>
-      {prev && <p className="mt-3 text-[12px] text-txt-muted">Cambios respecto a la sesión del {fmtDate(sessionTime(prev))}. En verde o rojo solo cuando el sentido favorable es inequívoco.</p>}
+      <p className="mt-3 text-[13px] text-txt-muted">Movimiento observado durante el juego, no capacidad máxima ni recuperación clínica. Las cifras de rendimiento y los registros históricos se conservan en el detalle de sesiones.</p>
+      {prev && <p className="mt-2 text-[12px] text-txt-muted">Diferencias descriptivas respecto al {fmtDate(sessionTime(prev))} solo con versiones y contexto compatibles. No se ha establecido un cambio mínimo detectable.</p>}
     </Panel>
   );
 }
 
 function ChapterSummary({ chapter, row, prevRow }: { chapter: ChapterKey; row: Row | null; prevRow: Row | null }) {
   const ch = CHAPTERS[chapter];
-  const ms = measuresOf(chapter).filter(m => m.key && row && formatValue(m, row) !== null);
+  const context = measurementOf(row);
+  const ms = measuresOf(chapter).filter(m => m.key && context && row && formatValue(m, row) !== null);
+  const reason = prevRow ? comparisonReason(row, prevRow) : 'Sin sesión previa para comparar';
   return (
     <div className="rounded-[10px] border border-clay-border">
       <div className="px-4 py-3 border-b border-clay-border flex items-center gap-2">
         <span className="size-2 rounded-full" style={{ background: ch.colorVar }} aria-hidden />
-        <p className="text-[14px] font-semibold text-txt">{ch.title}</p>
-        <p className="text-[13px] text-txt-muted">· {ch.gesture}</p>
+        <div><p className="text-[14px] font-semibold text-txt">{DIMENSIONS[chapter]}</p>
+        <p className="text-[13px] text-txt-muted">{ch.title}</p></div>
       </div>
       {!row ? (
         <p className="px-4 py-4 text-[13px] text-txt-muted">No se jugó en esta sesión.</p>
+      ) : !ms.length ? (
+        <p className="px-4 py-4 text-[13px] text-txt-muted">{context ? 'Sin suficientes muestras utilizables de juego autónomo. Consulte las oportunidades registradas.' : 'Registro histórico: sus cifras se conservan en el detalle, sin reinterpretarlas con el método nuevo.'}</p>
       ) : (
         <dl className="divide-y divide-clay-border">
           {ms.map(m => {
             const v = m.read(row), pv = prevRow ? m.read(prevRow) : null;
-            const delta = v !== null && pv !== null ? formatDelta(m, v, pv) : null;
+            const delta = !reason && v !== null && pv !== null ? formatDelta(m, v, pv) : null;
             return (
               <div key={m.id} className="px-4 py-2.5 flex items-baseline justify-between gap-3" title={m.meaning}>
                 <dt className="text-[13px] text-txt-secondary">{m.label}</dt>
@@ -126,6 +132,7 @@ function ChapterSummary({ chapter, row, prevRow }: { chapter: ChapterKey; row: R
           })}
         </dl>
       )}
+      {row && reason && <p className="px-4 pb-3 text-[12px] text-txt-muted">{reason}.</p>}
     </div>
   );
 }
@@ -134,20 +141,24 @@ function ChapterSummary({ chapter, row, prevRow }: { chapter: ChapterKey; row: R
 const shortDate = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short' });
 function Evolution({ sessions }: { sessions: Session[] }) {
   // Solo medidas con valor en al menos dos sesiones (con una sola no hay evolución que mostrar).
-  const available = MEASURES.filter(m => sessions.filter(s => { const r = chapterRow(s, m.chapter); return r && m.read(r) !== null; }).length >= 2);
+  const available = MEASURES.filter(m => m.key && sessions.filter(s => {
+    const r = chapterRow(s, m.chapter), latest = sessions.length ? chapterRow(sessions[sessions.length - 1], m.chapter) : null;
+    return r && canCompare(latest, r) && m.read(r) !== null;
+  }).length >= 2);
   const [mid, setMid] = useState<string>(available[0]?.id ?? '');
   const m = available.find(x => x.id === mid) ?? available[0];
   const data = useMemo(() => !m ? [] : sessions.map(s => {
     const r = chapterRow(s, m.chapter);
-    return { t: sessionTime(s), ts: new Date(sessionTime(s)).getTime(), value: r ? m.read(r) : null };
-  }).filter(d => d.value !== null), [m, sessions]);
+    const latest = chapterRow(sessions[sessions.length - 1], m.chapter);
+    return { t: sessionTime(s), ts: new Date(sessionTime(s)).getTime(), value: r && canCompare(latest, r) ? m.read(r) : null };
+  }), [m, sessions]);
 
   if (sessions.length < 2) {
     return <Panel title="Evolución"><p className="text-[14px] text-txt-secondary">La evolución se muestra a partir de la segunda sesión. Por ahora hay {sessions.length === 1 ? 'una' : sessions.length}.</p></Panel>;
   }
-  if (!m) return <Panel title="Evolución"><p className="text-[14px] text-txt-secondary">Ninguna medida está disponible en al menos dos sesiones.</p></Panel>;
+  if (!m) return <Panel title="Evolución"><p className="text-[14px] text-txt-secondary">No hay dos sesiones con medidas y contexto compatibles con la última. No se mezclan manos, versiones, configuraciones, ayudas o capturas con incidencias. Los registros siguen disponibles en el detalle.</p></Panel>;
 
-  const first = data[0]?.value as number;
+  const first = data.find(d => d.value !== null)?.value as number;
   const fmt = (v: number) => `${v.toLocaleString('es-ES', { maximumFractionDigits: m.decimals })}${!m.unit ? '' : m.unit === '°' ? '°' : ` ${m.unit}`}`;
   return (
     <Panel
@@ -166,7 +177,7 @@ function Evolution({ sessions }: { sessions: Session[] }) {
         </label>
       }
     >
-      <div className="h-[280px]" role="img" aria-label={`Evolución de ${m.label}: ${data.map(d => `${shortDate.format(d.ts)} ${fmt(d.value as number)}`).join(', ')}`}>
+      <div className="h-[280px]" role="img" aria-label={`Evolución de ${m.label}: ${data.map(d => `${shortDate.format(d.ts)} ${d.value === null ? 'No comparable' : fmt(d.value)}`).join(', ')}`}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: 4 }}>
             <CartesianGrid stroke="#E2E8F0" vertical={false} />
@@ -178,11 +189,11 @@ function Evolution({ sessions }: { sessions: Session[] }) {
             <Tooltip separator=": " formatter={(v: unknown) => [fmt(Number(v)), m.label]} labelFormatter={(_l, p) => (p?.[0] ? fmtDateTime((p[0].payload as { t: string }).t) : '')}
               contentStyle={{ borderRadius: 10, border: '1px solid #E2E8F0', boxShadow: 'none', fontSize: 13 }} />
             <ReferenceLine y={first} stroke="#CBD5E1" strokeDasharray="4 4" />
-            <Line type="linear" dataKey="value" stroke={CHAPTERS[m.chapter].hex} strokeWidth={2} dot={{ r: 3.5, strokeWidth: 0, fill: CHAPTERS[m.chapter].hex }} activeDot={{ r: 5 }} isAnimationActive={false} />
+            <Line type="linear" connectNulls={false} dataKey="value" stroke={CHAPTERS[m.chapter].hex} strokeWidth={2} dot={{ r: 3.5, strokeWidth: 0, fill: CHAPTERS[m.chapter].hex }} activeDot={{ r: 5 }} isAnimationActive={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <p className="mt-2 text-[12px] text-txt-muted">{m.how} La línea discontinua marca el valor de la primera sesión ({fmt(first)}).</p>
+      <p className="mt-2 text-[12px] text-txt-muted">{m.how} La línea discontinua marca la primera sesión compatible ({fmt(first)}). Los huecos indican datos ausentes o no comparables. Coincidir en estos controles no garantiza igual postura ni exactitud clínica.</p>
     </Panel>
   );
 }
@@ -242,7 +253,7 @@ export function SessionDetail({ s }: { s: Session }) {
               <p className="text-[14px] font-semibold">{ch.title}</p>
               {row && <p className="ml-auto text-[12px] text-txt-muted tabular-nums">{Math.round(((row.duration_ms as number) || 0) / 1000)} s · mano detectada {QUALITY_MEASURE.read(row) === null ? '—' : `${Math.round(QUALITY_MEASURE.read(row) as number)} %`}</p>}
             </div>
-            {row && <ReliabilityLine row={row} />}
+            {row && <><ReliabilityLine row={row} /><ObservationDetails row={row} /></>}
             {!row ? <p className="px-4 py-4 text-[13px] text-txt-muted">No se jugó.</p> : (
               <>
                 <dl className="divide-y divide-clay-border">
@@ -256,6 +267,21 @@ export function SessionDetail({ s }: { s: Session }) {
       })}
     </div>
   );
+}
+
+function ObservationDetails({ row }: { row: Row }) {
+  const context = measurementOf(row);
+  if (!context) return <p className="px-4 py-3 text-[12px] text-txt-muted">Histórico sin trazabilidad completa. Se conservan los valores originales; no se comparan automáticamente con la versión nueva.</p>;
+  return <details className="border-b border-clay-border">
+    <summary className="px-4 py-3 text-[13px] cursor-pointer">Oportunidades registradas ({context.observations.length})</summary>
+    <p className="px-4 pb-2 text-[12px] text-txt-muted">Una oportunidad es una ventana del ejercicio, no necesariamente un intento voluntario. No completar no equivale a incapacidad.</p>
+    <ul className="px-4 pb-3 space-y-2 text-[12px]">
+      {context.observations.map((o, i) => <li key={o.id}>
+        <strong>{i + 1}. {o.stage === 'active' ? 'Autónoma' : o.stage === 'tutorial' ? 'Guiada' : 'Preparación'}</strong>: {OBSERVATION_STATUS[o.status]} · {o.usableCount} / {o.sampleCount} muestras.
+        {o.p95 !== null && <span> Intervalo observado P05–P95: {o.p05?.toFixed(2)}–{o.p95.toFixed(2)} {context.game === 'fox_runner' ? 'palmas' : '°'}.</span>}
+      </li>)}
+    </ul>
+  </details>;
 }
 
 function MeasureLine({ m, row }: { m: Measure; row: Row }) {
@@ -280,14 +306,14 @@ function Repetitions({ chapter, row }: { chapter: ChapterKey; row: Row }) {
   const head = (cols: string[]) => <tr className="text-left text-[11px] text-txt-muted">{cols.map(c => <th key={c} className="font-medium px-2 py-1.5 first:pl-4 whitespace-nowrap">{c}</th>)}</tr>;
   let body: React.ReactNode, cols: string[];
   if (chapter === 'fox_runner') {
-    cols = ['Pinza', 'Apertura previa', 'Completa', 'Cierre', 'Mantiene'];
+    cols = ['Pinza', 'Apertura previa', 'Supera umbral', 'Cierre', 'Mantiene'];
     body = reps.map((r, i) => <tr key={i}>{[`${i + 1}`, typeof r.opening_palm === 'number' ? `${n0((r.opening_palm as number) * PALM_MM)} mm` : '—', r.full_open === true ? 'Sí' : r.full_open === false ? 'No' : '—', `${n0(r.closing_ms)} ms`, `${n0(r.hold_ms)} ms`].map((c, j) => <td key={j} className="px-2 py-1.5 first:pl-4 tabular-nums whitespace-nowrap">{c}</td>)}</tr>);
   } else if (chapter === 'fox_balloon') {
     cols = ['Paso', 'Superado', 'Choque'];
     body = reps.map((r, i) => <tr key={i}>{[`${i + 1}`, r.passed ? 'Sí' : 'No', r.hit ? 'Sí' : 'No'].map((c, j) => <td key={j} className="px-2 py-1.5 first:pl-4">{c}</td>)}</tr>);
   } else {
-    cols = ['Flor', 'Pronación', 'Contrario', 'Hasta regar', 'Vel. máx.'];
-    body = reps.map((r, i) => <tr key={i}>{[FLOWER[r.kind as string] ?? `${i + 1}`, `${n0(r.peak_tilt_deg)}°`, `${n0(r.peak_opposite_deg)}°`, `${n0(((r.time_to_bloom_ms as number) ?? 0) / 1000, 1)} s`, `${n0(r.peak_velocity_out)} °/s`].map((c, j) => <td key={j} className="px-2 py-1.5 first:pl-4 tabular-nums whitespace-nowrap">{c}</td>)}</tr>);
+    cols = ['Flor', 'Inclinación', 'Contrario', 'Hasta regar', 'Vel. máx.'];
+    body = reps.map((r, i) => <tr key={i}>{[FLOWER[r.kind as string] ?? `${i + 1}`, `${n0(r.peak_tilt_deg)}°`, `${n0(r.peak_opposite_deg)}°`, typeof r.time_to_bloom_ms === 'number' ? `${n0(r.time_to_bloom_ms / 1000, 1)} s` : '—', `${n0(r.peak_velocity_out)} °/s`].map((c, j) => <td key={j} className="px-2 py-1.5 first:pl-4 tabular-nums whitespace-nowrap">{c}</td>)}</tr>);
   }
   return (
     <details className="border-t border-clay-border">
@@ -301,6 +327,14 @@ function Repetitions({ chapter, row }: { chapter: ChapterKey; row: Row }) {
 
 // Fiabilidad de un capítulo: nivel y sus tres componentes (solo en partidas nuevas).
 function ReliabilityLine({ row }: { row: Row }) {
+  const context = measurementOf(row);
+  if (context) return <div className="px-4 py-3 border-b border-clay-border text-[12px] text-txt-muted">
+    <p className="font-medium text-txt">Condiciones de captura · {context.selectedHand === 'Left' ? 'mano izquierda' : 'mano derecha'}</p>
+    <p>{context.capture.usable} / {context.capture.frames} muestras utilizables en juego autónomo. Hueco máximo: {context.capture.maxGapMs} ms.</p>
+    <p>{context.comparable ? 'Sin incidencias que bloqueen la comparación técnica.' : 'Revisar captura o ejercicio incompleto antes de comparar.'} No garantiza exactitud clínica.</p>
+    <p className="break-words">Versión: {context.version} · {context.source}</p>
+    {context.adaptation.length > 0 && <p>Umbrales de ayuda registrados: {context.adaptation.map(a => `${a.threshold}°`).join(' → ')}.</p>}
+  </div>;
   const r = reliabilityOf(row);
   if (!r) return null;
   const n = (v: number | null) => (v == null ? '—' : `${Math.round(v)} %`);

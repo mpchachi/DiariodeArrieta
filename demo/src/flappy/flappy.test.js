@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FLAPPY_CONFIG as C } from './config.js';
-import { mapLandmarks, measureFist, measureFistCurl, HandSmoother } from './fist.js';
+import { mapLandmarks, measureFist, measureFistCurl, HandSmoother, measureFingerAngles } from './fist.js';
 import { FlappyEngine, buildColumns } from './engine.js';
 import { FlappySession, processFlappyMetrics } from './session.js';
 
@@ -95,6 +95,22 @@ test('puño 3D: solo sube con puño real, no al doblar solo nudillos o solo fala
   assert.ok(measureFistCurl(worldHand([5, 90, 80])).strength < 0.1, 'encoger solo las falanges (garra)');
   const half = measureFistCurl(worldHand([45, 50, 40])).strength;
   assert.ok(half > 0.1 && half < 0.8, `medio cerrado ${half}`);
+});
+
+test('ángulos de medición: flexión, separación lateral, espejo y geometría inválida', () => {
+  const open = worldHand([0, 0, 0]);
+  for (const base of [5, 9, 13, 17]) {
+    const p = open[base], d = Math.atan2(p.x, p.y) + Math.PI / 6;
+    for (let j = 1; j <= 3; j++) open[base + j] = { x: p.x + j * .02 * Math.sin(d), y: p.y + j * .02 * Math.cos(d), z: 0 };
+  }
+  assert.ok(measureFingerAngles(open).meanDeg < .001);
+  for (const sign of [-1, 1]) {
+    const result = measureFingerAngles(worldHand([40, 50, 30]).map(p => ({ ...p, x: sign * p.x })));
+    assert.ok(Math.abs(result.meanDeg - 120) < .001);
+    assert.equal(result.fingers.length, 4);
+  }
+  assert.equal(measureFingerAngles(null), null);
+  assert.equal(measureFingerAngles(Array.from({ length: 21 }, () => ({ x: 0, y: 0, z: 0 }))), null);
 });
 
 test('globo: flexión real de los dedos en grados, sin el recorte de la señal de control', async () => {

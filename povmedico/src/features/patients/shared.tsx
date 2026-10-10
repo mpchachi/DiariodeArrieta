@@ -1,5 +1,6 @@
 import type { Patient, Session } from '../../data/types';
-import { sessionReliability } from '../../data/measures';
+import { sessionReliability, chapterRow, CHAPTER_ORDER } from '../../data/measures';
+import { measurementOf } from '../../data/comparability';
 import { Badge, IconAlert } from '../../components/ui';
 
 export const SEX = (s: Patient['sex']) => (s === 'M' ? 'Hombre' : s === 'F' ? 'Mujer' : 'Otro');
@@ -27,7 +28,7 @@ export function notices(sessions: Session[]): { tone: 'warning' | 'neutral'; tex
   if (!last) return [{ tone: 'neutral', text: 'Sin sesiones' }];
   const out: { tone: 'warning' | 'neutral'; text: string }[] = [];
   if (last.qualityPct != null && last.qualityPct < QUALITY_MIN) out.push({ tone: 'warning', text: `Mano poco detectada (${Math.round(last.qualityPct)} %)` });
-  if (sessionReliability(last) === 'low') out.push({ tone: 'warning', text: 'Fiabilidad baja' });
+  if (sessionReliability(last) === 'low' || CHAPTER_ORDER.some(c => { const m = measurementOf(chapterRow(last, c)); return m && !m.comparable; })) out.push({ tone: 'warning', text: 'Captura o contexto a revisar' });
   if (last.completed === false) out.push({ tone: 'warning', text: 'Viaje incompleto' });
   const d = daysSince(sessionTime(last));
   if (d !== null && d > INACTIVE_DAYS) out.push({ tone: 'neutral', text: `${d} días sin jugar` });

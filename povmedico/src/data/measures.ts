@@ -8,6 +8,7 @@
 // sesiones del mismo paciente, no como medida absoluta ni para comparar entre pacientes.
 
 import type { Session } from './types';
+import { measurementOf } from './comparability';
 
 export type ChapterKey = 'fox_runner' | 'fox_balloon' | 'fox_garden';
 export type Row = Record<string, unknown>;
@@ -42,7 +43,7 @@ export const CHAPTERS: Record<ChapterKey, Chapter> = {
   },
   fox_garden: {
     key: 'fox_garden', order: 3, title: 'El huerto', gesture: 'Giro de la muñeca (verter)',
-    movement: 'Pronosupinación del antebrazo con la mano cerrada, como al inclinar una regadera.',
+    movement: 'Inclinación de la mano observada en la imagen durante el vertido. No aísla pronación/supinación del antebrazo ni compensaciones del brazo.',
     patientAction: 'Con el puño cerrado y el pulgar arriba, el paciente inclina la mano para regar cada flor y la vuelve a poner recta.',
     structure: '5 flores · ≈ 30–70 s · la mano no se desplaza, solo gira.',
     colorVar: 'var(--color-dom-pronosup)', hex: '#646298',
@@ -78,9 +79,21 @@ const outcome = (r: Row) => obj(r.outcome);
 const ofTotal = (a: unknown, b: unknown) => (num(a) !== null && num(b) !== null ? `${a} de ${b}` : null);
 
 export const MEASURES: Measure[] = [
+  {
+    id: 'runner_aperture_relative', chapter: 'fox_runner', label: 'Apertura relativa observada', unit: 'palmas', decimals: 2, key: true,
+    read: r => measurementOf(r)?.summary.upper ?? null,
+    meaning: 'Separación pulgar–índice relativa al tamaño visible de la palma. No mide capacidad máxima ni distancia física calibrada.',
+    how: 'Versión 2: mediana de los percentiles 95 por oportunidad autónoma con al menos 10 muestras utilizables, incluidas las no completadas. Depende de la orientación de la mano.',
+  },
+  {
+    id: 'garden_tilt_observed', chapter: 'fox_garden', label: 'Inclinación observada hacia el vertido', unit: '°', decimals: 0, key: true,
+    read: r => { const value = measurementOf(r)?.summary.upper; return value == null ? null : Math.max(0, value); },
+    meaning: 'Giro de la mano en la imagen respecto a su posición inicial. No equivale a rango anatómico máximo de pronación.',
+    how: 'Versión 2: mediana de los percentiles 95 por flor con al menos 10 muestras utilizables, incluidas las no completadas. Se registra por separado la ayuda adaptativa.',
+  },
   // ── La carrera (pinza) ──
   {
-    id: 'runner_obstacles', chapter: 'fox_runner', label: 'Troncos superados', unit: '', decimals: 0, key: true,
+    id: 'runner_obstacles', chapter: 'fox_runner', label: 'Troncos superados', unit: '', decimals: 0, key: false,
     read: r => num(obj(outcome(r).obstacles).cleared),
     text: r => ofTotal(obj(outcome(r).obstacles).cleared, obj(outcome(r).obstacles).total),
     meaning: 'Rendimiento en la tarea: cuántas veces la pinza llegó a tiempo para saltar el tronco.',
@@ -88,38 +101,38 @@ export const MEASURES: Measure[] = [
     better: 'higher',
   },
   {
-    id: 'runner_aperture', chapter: 'fox_runner', label: 'Apertura pulgar-índice', unit: 'mm', decimals: 0, key: true,
+    id: 'runner_aperture', chapter: 'fox_runner', label: 'Apertura pulgar-índice', unit: 'mm', decimals: 0, key: false,
     read: r => num(r.grip_aperture_mean_mm),
     meaning: 'Capacidad de separar pulgar e índice antes de pinzar (extensión y abducción del pulgar).',
     how: 'Mediana de la máxima separación entre yemas antes de cada pinza, relativa a la palma y convertida a mm (estimación).',
     better: 'higher',
   },
   {
-    id: 'runner_incomplete', chapter: 'fox_runner', label: 'Aperturas incompletas', unit: '', decimals: 0, key: true,
+    id: 'runner_incomplete', chapter: 'fox_runner', label: 'Aperturas bajo el umbral del juego', unit: '', decimals: 0, key: false,
     read: r => num(outcome(r).incompleteOpenings),
     text: r => ofTotal(outcome(r).incompleteOpenings, outcome(r).openingsMeasured),
-    meaning: 'Veces que el paciente volvió a pinzar sin haber abierto del todo la mano.',
+    meaning: 'Ciclos que no alcanzaron la apertura de referencia del juego. Ese umbral no define apertura anatómica completa.',
     how: 'Aperturas entre pinzas que no alcanzan el 45 % de la longitud de la palma (≈ 4 cm).',
     better: 'lower',
   },
   {
     id: 'runner_closed', chapter: 'fox_runner', label: 'Distancia con la pinza cerrada', unit: 'mm', decimals: 0,
     read: r => num(r.pinch_distance_mean_mm),
-    meaning: 'Lo que llega a cerrarse la pinza: cuanto menor, más contacto real entre yemas.',
+    meaning: 'Distancia proyectada entre yemas durante cierres reconocidos por el juego. La superposición en imagen no demuestra contacto físico.',
     how: 'Mediana de la distancia entre yemas mientras la pinza está cerrada (estimación en mm).',
     better: 'lower',
   },
   {
-    id: 'runner_speed', chapter: 'fox_runner', label: 'Velocidad de cierre', unit: 'mm/s', decimals: 0, key: true,
+    id: 'runner_speed', chapter: 'fox_runner', label: 'Velocidad de cierre', unit: 'mm/s', decimals: 0, key: false,
     read: r => num(r.mean_peak_velocity),
-    meaning: 'Rapidez con la que se cierra la pinza (bradicinesia si es baja).',
+    meaning: 'Velocidad media estimada del cierre que activó el juego, no velocidad pico. Depende del umbral y la postura; un valor bajo no diagnostica bradicinesia.',
     how: 'Mediana del recorrido de cierre dividido por su duración, por pinza.',
     better: 'higher',
   },
   {
     id: 'runner_hold', chapter: 'fox_runner', label: 'Tiempo que mantiene la pinza', unit: 's', decimals: 1,
     read: r => (num(outcome(r).medianHoldMs) === null ? null : (outcome(r).medianHoldMs as number) / 1000),
-    meaning: 'Cuánto sostiene la pinza antes de soltar. Valores muy altos pueden indicar dificultad para relajar.',
+    meaning: 'Tiempo que mantiene el cierre registrado. Puede depender de las instrucciones o de la estrategia; no mide por sí solo dificultad para relajar.',
     how: 'Mediana del tiempo entre el cierre y la apertura de cada pinza.',
   },
   {
@@ -139,13 +152,13 @@ export const MEASURES: Measure[] = [
   {
     id: 'runner_fatigue', chapter: 'fox_runner', label: 'Cambio de amplitud (inicio → final)', unit: '%', decimals: 0,
     read: r => num(r.fatigue_index),
-    meaning: 'Indicio de fatiga: un valor negativo indica que la amplitud baja al final de la partida.',
+    meaning: 'Variación de amplitud dentro de la sesión. No identifica fatiga: también influyen aprendizaje, estrategia y captura.',
     how: 'Diferencia porcentual entre la amplitud media del último tercio de pinzas y la del primer tercio.',
   },
 
   // ── El globo (puño) ──
   {
-    id: 'balloon_steps', chapter: 'fox_balloon', label: 'Pasos superados sin chocar', unit: '', decimals: 0, key: true,
+    id: 'balloon_steps', chapter: 'fox_balloon', label: 'Pasos superados sin chocar', unit: '', decimals: 0, key: false,
     read: r => num(obj(outcome(r).columns).cleared),
     text: r => ofTotal(obj(outcome(r).columns).cleared, obj(outcome(r).columns).total),
     meaning: 'Rendimiento en la tarea: control de cuándo cerrar y abrir para mantener la altura.',
@@ -153,30 +166,30 @@ export const MEASURES: Measure[] = [
     better: 'higher',
   },
   {
-    id: 'balloon_flex_max', chapter: 'fox_balloon', label: 'Flexión máxima de los dedos', unit: '°', decimals: 0, key: true,
-    read: r => num(obj(outcome(r).fingerFlexion).maxDeg),
-    meaning: 'Cuánto llega a cerrar la mano. Orientativo: un puño completo en una mano sana suma unos 260° (MCF 85° + IFP 110° + IFD 65°); con la cámara suele salir algo menos.',
-    how: 'Por fotograma, media de los 4 dedos de la flexión MCF + IFP + IFD (ángulos 3D estimados por MediaPipe); percentil 95 de la partida.',
+    id: 'balloon_flex_max', chapter: 'fox_balloon', label: 'Ángulo combinado al cerrar (estimado)', unit: '°', decimals: 0, key: true,
+    read: r => measurementOf(r)?.summary.upper ?? num(obj(outcome(r).fingerFlexion).maxDeg),
+    meaning: 'Suma angular estimada, promediada en cuatro dedos. No equivale a goniometría clínica ni a fuerza de agarre; no dispone de valores normativos.',
+    how: 'Versión 2: proyección del nudillo sobre el plano de flexión y ángulos entre falanges, a partir de puntos 3D inferidos. Mediana de P95 por oportunidad autónoma. El histórico usa otro método.',
     better: 'higher',
   },
   {
-    id: 'balloon_flex_min', chapter: 'fox_balloon', label: 'Flexión residual con la mano abierta', unit: '°', decimals: 0, key: true,
-    read: r => num(obj(outcome(r).fingerFlexion).minDeg),
-    meaning: 'Cuánto quedan doblados los dedos al abrir. 0° = dedos totalmente rectos; con la cámara, una mano sana abierta suele dar menos de 70°.',
-    how: 'Mismo cálculo; percentil 5 de la partida.',
+    id: 'balloon_flex_min', chapter: 'fox_balloon', label: 'Ángulo combinado al abrir (estimado)', unit: '°', decimals: 0, key: true,
+    read: r => measurementOf(r)?.summary.lower ?? num(obj(outcome(r).fingerFlexion).minDeg),
+    meaning: 'Ángulo observado durante la apertura en el juego. No demuestra extensión completa ni permite diagnosticar una limitación articular.',
+    how: 'Versión 2: mediana de P05 por oportunidad autónoma con al menos 10 muestras utilizables. No se usan valores mantenidos por el filtro cuando faltan puntos 3D.',
     better: 'lower',
   },
   {
-    id: 'balloon_arc', chapter: 'fox_balloon', label: 'Arco activo de los dedos', unit: '°', decimals: 0, key: true,
-    read: r => num(obj(outcome(r).fingerFlexion).arcDeg),
-    meaning: 'Recorrido entre la mano más abierta y el puño más cerrado: aproximación al movimiento activo total (TAM) medio por dedo.',
-    how: 'Flexión máxima − flexión residual.',
+    id: 'balloon_arc', chapter: 'fox_balloon', label: 'Recorrido angular observado (estimado)', unit: '°', decimals: 0, key: true,
+    read: r => measurementOf(r)?.summary.excursion ?? num(obj(outcome(r).fingerFlexion).arcDeg),
+    meaning: 'Variación de los ángulos estimados al abrir y cerrar durante la tarea. No equivale al movimiento activo total (TAM) clínico.',
+    how: 'Versión 2: mediana de las diferencias P95−P05 por oportunidad autónoma. No es necesariamente la diferencia de las dos medianas mostradas arriba.',
     better: 'higher',
   },
   {
     id: 'balloon_reps', chapter: 'fox_balloon', label: 'Cierres de puño', unit: '', decimals: 0,
     read: r => num(outcome(r).activations) ?? num(r.rep_count),
-    meaning: 'Número de cierres completos que hizo el paciente para mantener el globo.',
+    meaning: 'Activaciones de la señal de control para subir el globo. No equivalen a puños anatómicamente completos ni a fuerza muscular.',
     how: 'Cierres que superan el umbral de puño, separados por una apertura.',
   },
 
@@ -185,32 +198,32 @@ export const MEASURES: Measure[] = [
     id: 'garden_flowers', chapter: 'fox_garden', label: 'Flores regadas', unit: '', decimals: 0,
     read: r => num(outcome(r).flowersBloomed) ?? num(r.rep_count),
     text: r => ofTotal(outcome(r).flowersBloomed, outcome(r).flowersTotal),
-    meaning: 'Repeticiones completas del gesto de verter y volver a recto.',
+    meaning: 'Flores completadas en el juego, sin garantizar retorno a posición inicial ni amplitud máxima. Depende del umbral de ayuda.',
     how: 'Flores que llegan a florecer.',
     better: 'higher',
   },
   {
-    id: 'garden_pronation', chapter: 'fox_garden', label: 'Pronación máxima', unit: '°', decimals: 0, key: true,
+    id: 'garden_pronation', chapter: 'fox_garden', label: 'Máxima inclinación hacia el vertido (histórico)', unit: '°', decimals: 0, key: false,
     read: r => num(r.max_pronation_deg),
-    meaning: 'Rango activo hacia el lado de verter (mano derecha: hacia la izquierda).',
+    meaning: 'Valor histórico de giro en la imagen. No es una medida aislada de pronación del antebrazo.',
     how: 'Máxima inclinación de la línea de nudillos respecto a la postura recta inicial, en la imagen.',
     better: 'higher',
   },
   {
-    id: 'garden_supination', chapter: 'fox_garden', label: 'Supinación máxima', unit: '°', decimals: 0, key: true,
+    id: 'garden_supination', chapter: 'fox_garden', label: 'Máximo giro contrario (histórico)', unit: '°', decimals: 0, key: false,
     read: r => num(r.max_supination_deg),
-    meaning: 'Rango activo hacia el lado contrario al de verter.',
+    meaning: 'Giro en una dirección que el juego no solicita. No mide capacidad máxima de supinación ni demuestra confusión.',
     how: 'Máxima inclinación hacia el lado contrario. El juego no la pide: aparece cuando el paciente gira al otro lado.',
   },
   {
     id: 'garden_rom', chapter: 'fox_garden', label: 'Arco total de giro', unit: '°', decimals: 0,
     read: r => num(r.rom_deg_p90),
-    meaning: 'Suma de la pronación y la supinación máximas.',
-    how: 'Pronación máxima + supinación máxima.',
+    meaning: 'Suma histórica de giros máximos en la imagen. No es un rango articular validado ni su aumento implica mejoría.',
+    how: 'Máxima inclinación hacia el vertido + máximo giro contrario.',
     better: 'higher',
   },
   {
-    id: 'garden_speed', chapter: 'fox_garden', label: 'Velocidad máxima de giro', unit: '°/s', decimals: 0, key: true,
+    id: 'garden_speed', chapter: 'fox_garden', label: 'Velocidad máxima de giro', unit: '°/s', decimals: 0, key: false,
     read: r => num(r.mean_peak_velocity),
     meaning: 'Rapidez del gesto de verter.',
     how: 'Mediana, por flor, de la velocidad angular máxima al inclinar.',
@@ -226,21 +239,21 @@ export const MEASURES: Measure[] = [
   {
     id: 'garden_sparc', chapter: 'fox_garden', label: 'Suavidad del giro (SPARC)', unit: '', decimals: 2,
     read: r => num(r.session_sparc),
-    meaning: 'Fluidez del movimiento: valores más próximos a 0 indican un giro más suave; más negativos, más fragmentado.',
-    how: 'Spectral Arc Length del perfil de velocidad de cada vertido (Balasubramanian et al., 2012).',
+    meaning: 'Descriptor exploratorio del perfil de movimiento. No diagnostica espasticidad ni tiene umbrales clínicos propios validados.',
+    how: 'Versión 2: SPARC de la ventana de ida hasta el máximo de cada oportunidad, remuestreada a 30 Hz sin unir pérdidas de señal. No comparable con la implementación histórica.',
     better: 'higher',
   },
   {
-    id: 'garden_wrong', chapter: 'fox_garden', label: 'Flores con giro inicial al lado contrario', unit: '', decimals: 0,
+    id: 'garden_wrong', chapter: 'fox_garden', label: 'Flores con giro hacia el lado contrario', unit: '', decimals: 0,
     read: r => num(outcome(r).wrongDirectionFlowers),
     text: r => ofTotal(outcome(r).wrongDirectionFlowers, outcome(r).flowersTotal),
-    meaning: 'Orientación en la tarea: veces que buscó primero el giro hacia el otro lado (no es un error motor).',
-    how: 'Flores con más de 15° de giro hacia el lado contrario antes de regar.',
+    meaning: 'Oportunidades con giro hacia el lado contrario. El registro no determina si se debió a exploración, comprensión o control motor.',
+    how: 'Flores cuyo máximo contrario supera 15° durante la fase de riego; no determina que el giro fuera inicial.',
   },
   {
     id: 'garden_fatigue', chapter: 'fox_garden', label: 'Cambio de inclinación (inicio → final)', unit: '%', decimals: 0,
     read: r => num(r.fatigue_index),
-    meaning: 'Indicio de fatiga: un valor negativo indica menos inclinación en las últimas flores.',
+    meaning: 'Cambio de inclinación entre las primeras y últimas flores. Puede depender del aprendizaje y la ayuda adaptativa; no diagnostica fatiga.',
     how: 'Diferencia porcentual entre la inclinación máxima de las 2 últimas flores y la de las 2 primeras.',
   },
 ];
@@ -249,13 +262,13 @@ export const MEASURES: Measure[] = [
 export const QUALITY_MEASURE = {
   label: 'Mano detectada',
   read: (r: Row) => num(r.quality_frames_pct),
-  meaning: 'Porcentaje del tiempo de juego en que se vio la mano. Que se vea no garantiza que las medidas sean exactas: para eso está la fiabilidad.',
+  meaning: 'Cobertura operativa del seguimiento: históricamente tiempo válido en la carrera y fotogramas seguidos en globo/huerto. No es exactitud clínica; consulte las muestras utilizables de cada medida.',
 } as const;
 
 // Fiabilidad de la partida (vision/reliability.js en el juego). Solo existe en partidas nuevas.
 export type ReliabilityLevel = 'high' | 'medium' | 'low';
 export interface Reliability { level: ReliabilityLevel; reasons: string[]; detectedPct: number | null; rejectedPct: number | null; framingOkPct: number | null; framingIssues?: Record<string, number> }
-export const RELIABILITY_LABEL: Record<ReliabilityLevel, string> = { high: 'Fiabilidad alta', medium: 'Fiabilidad media', low: 'Fiabilidad baja' };
+export const RELIABILITY_LABEL: Record<ReliabilityLevel, string> = { high: 'Captura sin avisos del filtro antiguo', medium: 'Captura con avisos', low: 'Captura a revisar' };
 const REASON_TEXT: Record<string, string> = {
   detected: 'la mano no se vio todo el tiempo',
   rejected: 'se descartaron detecciones inestables (formas imposibles o saltos)',
@@ -268,6 +281,7 @@ export function reliabilityOf(r: Row | null): Reliability | null {
 }
 /** Peor fiabilidad de los capítulos de una sesión (o null si es una partida antigua). */
 export function sessionReliability(s: Session): ReliabilityLevel | null {
+  if (CHAPTER_ORDER.some(c => measurementOf(chapterRow(s, c)))) return null;
   const levels = CHAPTER_ORDER.map(c => reliabilityOf(chapterRow(s, c))?.level).filter(Boolean) as ReliabilityLevel[];
   if (!levels.length) return null;
   return levels.includes('low') ? 'low' : levels.includes('medium') ? 'medium' : 'high';
@@ -289,8 +303,7 @@ export function formatDelta(m: Measure, now: number, before: number): { text: st
   const n = Math.abs(d).toLocaleString('es-ES', { minimumFractionDigits: m.decimals, maximumFractionDigits: m.decimals });
   const zero = Number(n.replace(',', '.')) === 0;
   const text = zero ? 'Sin cambios' : `${d > 0 ? '+' : '−'}${n}${m.unit && m.unit !== '%' && m.unit !== '°' ? ` ${m.unit}` : m.unit}`;
-  if (zero || !m.better) return { text, tone: 'neutral' };
-  return { text, tone: (d > 0) === (m.better === 'higher') ? 'good' : 'bad' };
+  return { text, tone: 'neutral' };
 }
 
 /** Fila de un capítulo en una sesión (o null si no se jugó). */

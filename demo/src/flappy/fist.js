@@ -68,6 +68,26 @@ export function fingerFlexion(world) {
   });
 }
 
+export function measureFingerAngles(world) {
+  if (!world || world.length !== 21 || !world.every(p => p && [p.x, p.y, p.z].every(Number.isFinite))) return null;
+  const dot = (a, b) => a.x * b.x + a.y * b.y + a.z * b.z;
+  const unit = a => { const n = Math.hypot(a.x, a.y, a.z); return n > 1e-6 ? { x: a.x / n, y: a.y / n, z: a.z / n } : null; };
+  const a = sub(world[5], world[0]), b = sub(world[17], world[0]);
+  const normal = unit({ x: a.y * b.z - a.z * b.y, y: a.z * b.x - a.x * b.z, z: a.x * b.y - a.y * b.x });
+  if (!normal) return null;
+  const fingers = FINGERS.map(([mcp, pip, dip, tip]) => {
+    const meta = unit(sub(world[mcp], world[0])), prox = unit(sub(world[pip], world[mcp]));
+    const mid = unit(sub(world[dip], world[pip])), distal = unit(sub(world[tip], world[dip]));
+    if (!meta || !prox || !mid || !distal) return null;
+    const forward = dot(prox, meta), bend = dot(prox, normal);
+    if (Math.hypot(forward, bend) < 1e-6) return null;
+    return { mcp: Math.abs(Math.atan2(bend, forward)) * 180 / Math.PI,
+      pip: angleDeg(prox, mid), dip: angleDeg(mid, distal) };
+  });
+  if (fingers.some(f => !f)) return null;
+  return { fingers, meanDeg: fingers.reduce((sum, f) => sum + f.mcp + f.pip + f.dip, 0) / fingers.length };
+}
+
 export function measureFistCurl(world, C = DEFAULT) {
   if (!world || world.length < 21 || !world.every(p => [p.x, p.y, p.z].every(Number.isFinite))) {
     return { state: 'open', strength: 0, valid: false, fingers: null };

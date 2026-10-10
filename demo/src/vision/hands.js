@@ -65,14 +65,16 @@ export function isPlausibleHand(hand, width, height, V = VISION) {
 }
 
 export class HandTracker {
-  constructor({ preferred = null, V = VISION } = {}) { this.V = V; this.preferred = preferred; this.reset(); }
+  constructor({ preferred = null, required = false, V = VISION } = {}) { this.V = V; this.preferred = preferred; this.required = required; this.reset(); }
   reset() { this.track = null; this.pending = null; this.id = 0; this.rejected = null; }
 
   // frame: { t (ms), width, height, hands: [{ landmarks, handedness, score }] }
   // → { hand, reason, switched, id }. reason: ok | missing | implausible | jump | glitch
   select(frame) {
     const V = this.V, { width, height } = frame;
-    const all = frame.hands || [];
+    const visible = frame.hands || [];
+    const all = this.required && this.preferred ? visible.filter(h => h.handedness === this.preferred) : visible;
+    if (!all.length && visible.length) return { hand: null, reason: 'wrong-hand', switched: false, id: this.id };
     const checks = all.map(h => isPlausibleHand(h, width, height, V));
     const cands = all.filter((h, i) => checks[i].ok).map(h => ({ hand: h, ...palmMetrics(h.landmarks, width, height) }));
     this.rejected = checks.find(c => !c.ok)?.reason ?? null;

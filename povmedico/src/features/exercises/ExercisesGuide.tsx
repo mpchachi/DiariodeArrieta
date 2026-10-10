@@ -1,5 +1,5 @@
 import { CHAPTERS, CHAPTER_ORDER, measuresOf, QUALITY_MEASURE } from '../../data/measures';
-import { RELIABILITY } from '../../data/reliabilityCriteria';
+import { DIMENSIONS, MEASUREMENT_VERSION } from '../../data/comparability';
 import { PageHeader, Panel } from '../../components/ui';
 import { QUALITY_MIN, INACTIVE_DAYS } from '../patients/shared';
 
@@ -39,7 +39,7 @@ export function ExercisesGuide() {
           const ch = CHAPTERS[c];
           return (
             <Panel key={c} padded={false}
-              title={<span className="flex items-center gap-2"><span className="size-2 rounded-full" style={{ background: ch.colorVar }} aria-hidden />{ch.order}. {ch.title} · {ch.gesture}</span>}
+              title={<span className="flex items-center gap-2"><span className="size-2 rounded-full" style={{ background: ch.colorVar }} aria-hidden />{ch.order}. {DIMENSIONS[c]} · {ch.title}</span>}
               description={ch.structure}>
               <div className="grid gap-4 md:grid-cols-2 px-5 py-4 border-b border-clay-border text-[14px]">
                 <div><p className="text-[12px] text-txt-muted mb-1">Qué hace el paciente</p><p className="text-txt-secondary">{ch.patientAction}</p></div>
@@ -71,24 +71,23 @@ export function ExercisesGuide() {
           );
         })}
 
-        <Panel title="Fiabilidad de cada partida">
-          <p className="text-[14px] text-txt-secondary mb-2">Que la mano se vea no garantiza que las medidas sean exactas. Por eso cada ejercicio indica su fiabilidad a partir de tres datos, contados fotograma a fotograma mientras se juega:</p>
+        <Panel title="Condiciones de captura y comparabilidad">
+          <p className="text-[14px] text-txt-secondary mb-2">Una mano detectada no garantiza medidas exactas. La versión {MEASUREMENT_VERSION} conserva muestras escalares, fase, oportunidad, incidencias y configuración, sin imágenes ni vídeo.</p>
           <ul className="list-disc pl-5 space-y-1.5 text-[14px] text-txt-secondary">
-            <li><strong className="font-semibold text-txt">Mano detectada:</strong> fotogramas con la mano válida y seguida.</li>
-            <li><strong className="font-semibold text-txt">Descartadas:</strong> fotogramas en los que había una mano pero se descartó por tener una forma imposible, dar un salto brusco o cambiar de mano un instante.</li>
-            <li><strong className="font-semibold text-txt">Encuadre correcto:</strong> de los fotogramas con mano, los que no estaban demasiado cerca, lejos, en un borde o con poca luz.</li>
+            <li>El tutorial y la preparación quedan separados del juego autónomo.</li>
+            <li>Una oportunidad no completada conserva las medidas disponibles. Si no hay señal utilizable, no se rellena con cero.</li>
+            <li>Las medidas usan datos actuales de la mano elegida; un valor mantenido por el filtro no es una muestra nueva.</li>
+            <li>Los cambios solo se calculan entre versiones, manos, métodos, configuraciones, resoluciones y secuencias de ayuda equivalentes.</li>
+            <li>De forma conservadora se bloquea la comparación automática si hay muestras autónomas no utilizables, huecos de más de 250 ms, truncamiento o ejercicios interrumpidos. Son controles técnicos, no umbrales clínicos.</li>
           </ul>
-          <p className="mt-3 text-[13px] text-txt-muted">
-            Criterio interno de FixedGap (no es un estándar): <strong className="font-medium text-txt">alta</strong> si la mano se detecta al menos el {RELIABILITY.high.detected} % del tiempo, se descarta como mucho el {RELIABILITY.high.rejected} % y el encuadre es correcto al menos el {RELIABILITY.high.framing} %;{' '}
-            <strong className="font-medium text-txt">baja</strong> si la detección baja del {RELIABILITY.low.detected} %, los descartes pasan del {RELIABILITY.low.rejected} % o el encuadre baja del {RELIABILITY.low.framing} %; <strong className="font-medium text-txt">media</strong> en el resto. Las partidas anteriores al 10 de octubre de 2026 no tienen este dato.
-          </p>
+          <p className="mt-3 text-[13px] text-txt-muted">Las sesiones antiguas se conservan sin recalcular. La compatibilidad registrada no garantiza igual postura, esfuerzo o cámara física. No se han establecido valores normativos ni cambio mínimo detectable.</p>
         </Panel>
 
         <Panel title="Avisos de la lista de pacientes">
           <p className="text-[14px] text-txt-secondary mb-2">Son avisos sobre la calidad o la regularidad de los datos, no alertas clínicas:</p>
           <ul className="list-disc pl-5 space-y-1.5 text-[14px] text-txt-secondary">
             <li><strong className="font-semibold text-txt">Mano poco detectada:</strong> la mano se vio menos del {QUALITY_MIN} % del tiempo en la última sesión.</li>
-            <li><strong className="font-semibold text-txt">Fiabilidad baja:</strong> en algún ejercicio de la última sesión la detección fue inestable o la mano estuvo mal encuadrada (ver abajo).</li>
+            <li><strong className="font-semibold text-txt">Captura a revisar:</strong> incidencias del registro, no una conclusión sobre el estado motor de la persona.</li>
             <li><strong className="font-semibold text-txt">Viaje incompleto:</strong> se saltó o no se terminó algún ejercicio.</li>
             <li><strong className="font-semibold text-txt">Días sin jugar:</strong> han pasado más de {INACTIVE_DAYS} días desde la última sesión.</li>
           </ul>

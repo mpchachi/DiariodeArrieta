@@ -72,7 +72,24 @@ export function resetMetrics() {
 // A3: Real SPARC (Spectral Arc Length) — Balasubramanian et al. 2012.
 // Exported for per-repetition SPARC computation (C5).
 export function computeSPARCFromProfile(speedProfile, sampleRate = 30) {
-  return computeSPARC(speedProfile, sampleRate);
+  if (!Number.isFinite(sampleRate) || sampleRate <= 0 || speedProfile.length < 10 ||
+    !speedProfile.every(v => Number.isFinite(v) && v >= 0) || !speedProfile.some(v => v > 0)) return null;
+  let size = 16;
+  while (size < speedProfile.length * 16) size *= 2;
+  const re = new Array(size).fill(0), im = new Array(size).fill(0);
+  speedProfile.forEach((v, i) => { re[i] = v; });
+  fftInPlace(re, im, size);
+  const limit = Math.min(Math.floor(size / 2), Math.floor(10 * size / sampleRate));
+  const magnitude = Array.from({ length: limit + 1 }, (_, i) => Math.hypot(re[i], im[i]));
+  const peak = magnitude.reduce((max, v) => Math.max(max, v), 0);
+  if (!(peak > 0)) return null;
+  const spectrum = magnitude.map(v => v / peak);
+  let last = spectrum.length - 1;
+  while (last > 0 && spectrum[last] < .05) last--;
+  if (!last) return null;
+  let arc = 0;
+  for (let i = 1; i <= last; i++) arc += Math.hypot(1 / last, spectrum[i] - spectrum[i - 1]);
+  return -arc;
 }
 // Computes arc length of the normalized magnitude spectrum of the speed profile.
 // More negative = less smooth (fragmented movement).

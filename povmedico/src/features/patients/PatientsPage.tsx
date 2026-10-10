@@ -44,7 +44,7 @@ export function PatientsPage() {
           <Stat label="Pacientes" value={rows.filter(r => r.p.subjectType === 'patient').length} />
           <Stat label="Voluntarios sanos" value={rows.filter(r => r.p.subjectType === 'healthy').length} hint="Grupo de referencia" />
           <Stat label="Sesiones en los últimos 7 días" value={week} />
-          <Stat label="Con avisos en la última sesión" value={withNotices} hint="Mano poco detectada, fiabilidad baja o viaje incompleto" />
+          <Stat label="Con avisos en la última sesión" value={withNotices} hint="Captura a revisar o ejercicio incompleto; no son diagnósticos" />
         </div>
       )}
 

@@ -52,8 +52,8 @@ function measureStrict(hand, frame, C) {
 }
 
 export class HandSelector {
-  constructor(hand = 'Right', C = DEFAULT) { this.C = C; this.hand = hand; this.previous = null; this.tracker = new HandTracker({ preferred: hand }); }
-  reset(hand = this.hand) { this.hand = hand; this.previous = null; this.tracker = new HandTracker({ preferred: hand }); }
+  constructor(hand = 'Right', C = DEFAULT) { this.C = C; this.hand = hand; this.previous = null; this.tracker = new HandTracker({ preferred: hand, required: this.C.requireChosenHand === true }); }
+  reset(hand = this.hand) { this.hand = hand; this.previous = null; this.tracker = new HandTracker({ preferred: hand, required: this.C.requireChosenHand === true }); }
   select(frame) {
     const C = this.C;
     if (!C.strictQuality) {
@@ -106,7 +106,7 @@ export class PinchController {
     if (this.qualitySince === null) this.qualitySince = t;
     const open = m.ratio >= C.openRatio;
     const closed = m.ratio <= C.closeRatio;
-    if (open) this.lastOpenT = t;
+    if (open && this.state === 'acquiring') this.lastOpenT = t;
     if (this.state === 'acquiring') {
       if (!open) this.pending = null;
       else if (!this.pending) this.pending = { since: t };
@@ -116,6 +116,7 @@ export class PinchController {
       return this.snapshot(null);
     }
     if (this.state === 'open') {
+      if (m.ratio >= this.maximum) this.lastOpenT = t;
       this.maximum = Math.max(this.maximum, m.ratio);
       if (!closed) this.pending = null;
       else if (!this.pending) this.pending = { since: t };
@@ -140,7 +141,7 @@ export class PinchController {
         holdMs: this.pending.since - this.closedAt, durationMs: t - this.openAt,
         amplitude: this.maximum - this.minimum, minimum: this.minimum, maximum: this.maximum };
       this.state = 'open'; this.openAt = t; this.maximum = m.ratio; this.minimum = Infinity; this.pending = null;
-      this.afterRelease = true;
+      this.afterRelease = true; this.lastOpenT = t;
       return this.snapshot(event);
     }
     return this.snapshot(null);

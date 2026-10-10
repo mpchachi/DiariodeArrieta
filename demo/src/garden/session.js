@@ -28,19 +28,19 @@ export function flowerMetrics(f) {
     returnMs: f.returnAt !== null && f.bloomAt !== null ? round(f.returnAt - f.bloomAt, 0) : null,
     pourMs: round(f.pourMs, 0), peakVelocityOutDegS: round(f.peakVelIn), peakVelocityBackDegS: round(f.peakVelOut),
     startThresholdDeg: round(f.startThresholdDeg), compensation: f.compensation,
-    signal: f.samples,
+    signal: f.samples, completed: f.bloomAt !== null && f.bloomAt !== undefined, returned: f.returnAt !== null && f.returnAt !== undefined,
   };
 }
 
 export function summarize(engine, extra = {}, C = GARDEN_CONFIG) {
-  const flowers = engine.flowers.filter(f => f?.bloomAt !== null && f?.bloomAt !== undefined).map(flowerMetrics);
+  const flowers = engine.flowers.filter(Boolean).map(flowerMetrics);
   const peaks = flowers.map(f => f.peakTiltDeg);
   return {
     schemaVersion: 1, protocol: C.protocol, algorithmVersion: C.algorithm, game: 'garden',
     createdAt: new Date().toISOString(), ...extra,
     neutralDeg: round(engine.neutral), pourSign: engine.pourSign,
     summary: {
-      flowersBloomed: flowers.length, flowersTotal: C.flowers.length,
+      flowersBloomed: flowers.filter(f => f.completed).length, flowersTotal: C.flowers.length,
       maxTiltDeg: peaks.length ? round(Math.max(...peaks)) : null,
       medianPeakTiltDeg: round(median(peaks)),
       medianTimeToBloomMs: round(median(flowers.map(f => f.timeToBloomMs)), 0),

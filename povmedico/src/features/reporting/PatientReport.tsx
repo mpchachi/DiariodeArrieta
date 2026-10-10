@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import type { Patient, Session } from '../../data/types';
 import { getPatient, getSessions } from '../../data/api';
+import { canCompare, comparisonReason, measurementOf } from '../../data/comparability';
 import { CHAPTERS, CHAPTER_ORDER, measuresOf, formatValue, formatDelta, chapterRow, sessionReliability, RELIABILITY_LABEL } from '../../data/measures';
 import { Panel, Empty, btn, IconArrowLeft, IconPrinter } from '../../components/ui';
 import { SEX, MOBILITY, fmtDate, fmtDateTime, byDate, sessionTime, daysSince } from '../patients/shared';
@@ -52,10 +53,10 @@ export function PatientReport() {
         <section className="py-6">
           <h2 className="text-[16px] font-semibold">Última sesión · {fmtDateTime(sessionTime(last))}</h2>
           <p className="text-[13px] text-txt-muted mt-0.5">
-            {last.handUsed === 'left' ? 'Mano izquierda' : 'Mano derecha'}
+            {last.handUsed === 'left' ? 'Mano izquierda' : last.handUsed === 'right' ? 'Mano derecha' : 'Mano no registrada'}
             {last.qualityPct != null && ` · mano detectada ${Math.round(last.qualityPct)} %`}
             {sessionReliability(last) && ` · ${RELIABILITY_LABEL[sessionReliability(last)!].toLowerCase()}`}
-            {sessions.length > 1 && ` · cambio respecto a la primera sesión (${fmtDate(sessionTime(first))})`}
+            {sessions.length > 1 && ` · referencia para comparación, si es compatible: ${fmtDate(sessionTime(first))}`}
           </p>
           {CHAPTER_ORDER.map(c => {
             const row = chapterRow(last, c), row0 = sessions.length > 1 ? chapterRow(first, c) : null;
@@ -63,6 +64,7 @@ export function PatientReport() {
             return (
               <div key={c} className="mt-5 break-inside-avoid">
                 <h3 className="text-[14px] font-semibold">{CHAPTERS[c].order}. {CHAPTERS[c].title} — {CHAPTERS[c].gesture}</h3>
+                <p className="mt-1 text-[12px] text-txt-muted">{measurementOf(row) ? `Medición ${measurementOf(row)!.version}; ${measurementOf(row)!.selectedHand === 'Left' ? 'mano izquierda' : 'mano derecha'}.` : 'Histórico sin versión compatible; valores originales.'} {row0 && comparisonReason(row, row0)} Las diferencias son descriptivas, no mejoría clínica.</p>
                 <table className="mt-2 w-full text-[13px]">
                   <tbody className="divide-y divide-clay-border border-y border-clay-border">
                     {measuresOf(c).map(m => {
@@ -73,7 +75,7 @@ export function PatientReport() {
                         <tr key={m.id}>
                           <td className="py-1.5 pr-4 text-txt-secondary">{m.label}</td>
                           <td className="py-1.5 pr-4 text-right font-medium tabular-nums whitespace-nowrap">{v}</td>
-                          {sessions.length > 1 && <td className="py-1.5 text-right text-txt-muted tabular-nums whitespace-nowrap w-[120px]">{now !== null && before !== null ? formatDelta(m, now, before).text : '—'}</td>}
+                          {sessions.length > 1 && <td className="py-1.5 text-right text-txt-muted tabular-nums whitespace-nowrap w-[120px]">{m.key && canCompare(row, row0) && now !== null && before !== null ? formatDelta(m, now, before).text : '—'}</td>}
                         </tr>
                       );
                     })}
@@ -92,7 +94,7 @@ export function PatientReport() {
               {[...sessions].reverse().map(s => (
                 <tr key={s.id}>
                   <td className="py-1.5">{fmtDateTime(sessionTime(s))}</td>
-                  <td className="py-1.5">{s.handUsed === 'left' ? 'Izquierda' : 'Derecha'}</td>
+                  <td className="py-1.5">{s.handUsed === 'left' ? 'Izquierda' : s.handUsed === 'right' ? 'Derecha' : 'No registrada'}</td>
                   <td className="py-1.5">{s.games.length} de 3{s.completed === false ? ' (incompleta)' : ''}</td>
                   <td className="py-1.5 text-right tabular-nums">{s.qualityPct != null ? `${Math.round(s.qualityPct)} %` : '—'}</td>
                 </tr>
